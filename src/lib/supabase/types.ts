@@ -48,6 +48,7 @@ export type Database = {
           id: string;
           team_id: string;
           code: string;
+          role: "leader" | "kid";
           created_by: string;
           created_at: string;
           revoked_at: string | null;
@@ -56,11 +57,44 @@ export type Database = {
           id?: string;
           team_id: string;
           code: string;
+          role?: "leader" | "kid";
           created_by: string;
           created_at?: string;
           revoked_at?: string | null;
         };
-        Update: { revoked_at?: string | null };
+        Update: { revoked_at?: string | null; role?: "leader" | "kid" };
+        Relationships: [];
+      };
+      members: {
+        Row: {
+          id: string;
+          team_id: string;
+          display_name: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          team_id: string;
+          display_name: string;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: { display_name?: string };
+        Relationships: [];
+      };
+      member_accounts: {
+        Row: {
+          member_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          member_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: never;
         Relationships: [];
       };
       boards: {
@@ -144,13 +178,13 @@ export type Database = {
         Row: {
           id: string;
           cell_id: string;
-          user_id: string;
+          member_id: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           cell_id: string;
-          user_id: string;
+          member_id: string;
           created_at?: string;
         };
         Update: never;

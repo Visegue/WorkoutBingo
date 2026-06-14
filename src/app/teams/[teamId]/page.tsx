@@ -3,13 +3,19 @@ import {
   Button,
   Card,
   Group,
+  Select,
   Stack,
   Text,
   TextInput,
   Textarea,
   Title,
 } from "@mantine/core";
-import { createBoard, createInvite } from "@/app/actions";
+import {
+  createBoard,
+  createInvite,
+  createMember,
+  linkAccountToMember,
+} from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv, siteUrl } from "@/lib/env";
@@ -41,6 +47,8 @@ export default async function TeamPage({
     { data: member },
     { data: boards },
     { data: invites },
+    { data: members },
+    { data: myMemberLinks },
   ] = await Promise.all([
     supabase.from("teams").select("id, name").eq("id", teamId).single(),
     supabase
@@ -56,14 +64,34 @@ export default async function TeamPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("team_invites")
-      .select("code, created_at")
+      .select("code, role, created_at")
       .eq("team_id", teamId)
       .is("revoked_at", null)
       .order("created_at", { ascending: false })
-      .limit(3),
+      .limit(5),
+    supabase
+      .from("members")
+      .select("id, display_name")
+      .eq("team_id", teamId)
+      .order("display_name"),
+    supabase
+      .from("member_accounts")
+      .select("member_id")
+      .eq("user_id", user.id),
   ]);
 
   const isLeader = member?.role === "leader";
+
+  // Check which members the current leader is linked to
+  const linkedMemberIds = new Set<string>();
+  if (myMemberLinks && myMemberLinks.length > 0 && members) {
+    const teamMemberIds = new Set(members.map((m) => m.id));
+    for (const link of myMemberLinks) {
+      if (teamMemberIds.has(link.member_id)) {
+        linkedMemberIds.add(link.member_id);
+      }
+    }
+  }
 
   return (
     <main className="page-shell">
@@ -80,7 +108,7 @@ export default async function TeamPage({
       </Group>
       <div className="card-grid">
         <Card radius="lg" p="lg" withBorder>
-          <Title order={2}>Brickor</Title>
+          <Title order={2}>Bingobrickor</Title>
           <Stack mt="md">
             {boards?.length ? (
               boards.map((board) => (
@@ -101,10 +129,70 @@ export default async function TeamPage({
             )}
           </Stack>
         </Card>
+
         {isLeader ? (
           <>
             <Card radius="lg" p="lg" withBorder>
-              <Title order={2}>Ny bricka</Title>
+              <Title order={2}>Spelare</Title>
+              <Stack mt="md">
+                {members?.length ? (
+                  members.map((m) => (
+                    <Group key={m.id} justify="space-between">
+                      <Text>{m.display_name}</Text>
+                      {!linkedMemberIds.has(m.id) ? (
+                        <form action={linkAccountToMember}>
+                          <input type="hidden" name="teamId" value={teamId} />
+                          <input type="hidden" name="memberId" value={m.id} />
+                          <Button
+                            type="submit"
+                            size="xs"
+                            variant="subtle"
+                            color="blue"
+                          >
+                            Koppla mig
+                          </Button>
+                        </form>
+                      ) : (
+                        <Badge size="sm" color="blue" variant="light">
+                          Kopplad
+                        </Badge>
+                      )}
+                    </Group>
+                  ))
+                ) : (
+                  <Text c="dimmed">Inga spelare ännu.</Text>
+                )}
+              </Stack>
+
+              <form action={createMember}>
+                <input type="hidden" name="teamId" value={teamId} />
+                <Stack mt="md">
+                  <TextInput
+                    name="displayName"
+                    label="Ny spelare"
+                    required
+                    placeholder="Namn"
+                  />
+                  <Button type="submit" color="green" variant="light">
+                    Lägg till spelare
+                  </Button>
+                </Stack>
+              </form>
+
+              <Button
+                component="a"
+                href={`/teams/${teamId}/members`}
+                variant="subtle"
+                color="gray"
+                mt="md"
+                fullWidth
+              >
+                Hantera spelare och konton
+              </Button>
+            </Card>
+
+            <Card radius="lg" p="lg" withBorder>
+              <Title order={2}>Ny bingobricka</Title>
               <form action={createBoard}>
                 <input type="hidden" name="teamId" value={teamId} />
                 <Stack mt="md">
@@ -145,19 +233,42 @@ export default async function TeamPage({
                 </Stack>
               </form>
             </Card>
+
             <Card radius="lg" p="lg" withBorder>
               <Title order={2}>Inbjudningar</Title>
               <form action={createInvite}>
                 <input type="hidden" name="teamId" value={teamId} />
-                <Button type="submit" color="green" mt="md">
-                  Skapa inbjudningskod
-                </Button>
+                <Stack mt="md">
+                  <Select
+                    name="role"
+                    label="Roll"
+                    data={[
+                      { value: "kid", label: "Spelare" },
+                      { value: "leader", label: "Ledare" },
+                    ]}
+                    defaultValue="kid"
+                  />
+                  <Button type="submit" color="green">
+                    Skapa inbjudningskod
+                  </Button>
+                </Stack>
               </form>
               <Stack mt="md" gap="xs">
                 {invites?.map((invite) => (
-                  <Text key={invite.code} ff="monospace">
-                    {invite.code} - {siteUrl}/invite/{invite.code}
-                  </Text>
+                  <Group key={invite.code} gap="xs">
+                    <Text ff="monospace" size="sm">
+                      {invite.code}
+                    </Text>
+                    <Badge
+                      size="xs"
+                      color={invite.role === "leader" ? "orange" : "blue"}
+                    >
+                      {invite.role === "leader" ? "ledare" : "spelare"}
+                    </Badge>
+                    <Text size="xs" c="dimmed">
+                      {siteUrl}/invite/{invite.code}
+                    </Text>
+                  </Group>
                 ))}
               </Stack>
             </Card>

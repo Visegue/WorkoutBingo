@@ -8,8 +8,8 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { checkCell, uncheckCell } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
+import { BingoGrid } from "@/components/bingo-grid";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -26,7 +26,7 @@ type Cell = {
     | { title: string; description: string | null }
     | { title: string; description: string | null }[]
     | null;
-  cell_checks: { user_id: string }[];
+  cell_checks: { member_id: string }[];
 };
 
 export default async function BoardPage({
@@ -50,7 +50,9 @@ export default async function BoardPage({
         .single(),
       supabase
         .from("board_cells")
-        .select("id, position, tasks(title, description), cell_checks(user_id)")
+        .select(
+          "id, position, tasks(title, description), cell_checks(member_id)",
+        )
         .eq("board_id", boardId)
         .order("position"),
       supabase
@@ -64,15 +66,46 @@ export default async function BoardPage({
   if (!board)
     return (
       <main className="page-shell">
-        <Text>Brickan hittades inte.</Text>
+        <Text>Bingobrickan hittades inte.</Text>
       </main>
     );
+
+  // Fetch linked members for the current user in this team
+  const { data: myLinks } = await supabase
+    .from("member_accounts")
+    .select("member_id")
+    .eq("user_id", user.id);
+
+  let linkedMembers: { id: string; display_name: string }[] = [];
+  if (myLinks && myLinks.length > 0) {
+    const { data: teamMembers } = await supabase
+      .from("members")
+      .select("id, display_name")
+      .eq("team_id", teamId)
+      .in("id", myLinks.map((l) => l.member_id));
+    linkedMembers = teamMembers ?? [];
+  }
+
   const typedCells = (cells ?? []) as Cell[];
-  const checkedCells = typedCells.filter(
+  const totalCells = board.width * board.height;
+
+  // Count total checks across all members
+  const totalCheckedCells = typedCells.filter(
     (cell) => cell.cell_checks.length > 0,
   ).length;
-  const totalCells = board.width * board.height;
+
   const isLeader = member?.role === "leader";
+
+  // Transform cells for the client component
+  const gridCells = typedCells.map((cell) => {
+    const task = Array.isArray(cell.tasks) ? cell.tasks[0] : cell.tasks;
+    return {
+      id: cell.id,
+      position: cell.position,
+      task,
+      checks: cell.cell_checks,
+    };
+  });
 
   return (
     <main className="page-shell">
@@ -107,11 +140,11 @@ export default async function BoardPage({
               {statusLabels[board.status]}
             </Badge>
             <Text fw={700}>
-              {checkedCells} / {totalCells} rutor ikryssade
+              {totalCheckedCells} / {totalCells} rutor ikryssade
             </Text>
           </Group>
           <Progress
-            value={totalCells ? (checkedCells / totalCells) * 100 : 0}
+            value={totalCells ? (totalCheckedCells / totalCells) * 100 : 0}
             color="green"
             size="lg"
             radius="xl"
@@ -120,61 +153,18 @@ export default async function BoardPage({
         {board.status !== "active" ? (
           <Card radius="lg" p="lg" withBorder>
             <Text>
-              Den här brickan är fortfarande ett utkast. En ledare måste
+              Den här bingobrickan är fortfarande ett utkast. En ledare måste
               generera den innan spelare kan kryssa i rutor.
             </Text>
           </Card>
         ) : (
-          <div
-            className="bingo-grid"
-            style={{ "--bingo-width": board.width } as React.CSSProperties}
-          >
-            {typedCells.map((cell) => {
-              const task = Array.isArray(cell.tasks) ? cell.tasks[0] : cell.tasks;
-              const checkedByMe = cell.cell_checks.some(
-                (check) => check.user_id === user.id,
-              );
-              return (
-                <Card
-                  key={cell.id}
-                  radius="lg"
-                  p="sm"
-                  withBorder
-                  bg={checkedByMe ? "green.0" : "white"}
-                >
-                  <Stack gap="xs" justify="space-between" h="100%">
-                    <div>
-                      <Text fw={800} size="sm">
-                        {task?.title}
-                      </Text>
-                      {task?.description ? (
-                        <Text size="xs" c="dimmed">
-                          {task.description}
-                        </Text>
-                      ) : null}
-                    </div>
-                    <Text size="xs" c="dimmed">
-                      {cell.cell_checks.length} kryss
-                    </Text>
-                    <form action={checkedByMe ? uncheckCell : checkCell}>
-                      <input type="hidden" name="teamId" value={teamId} />
-                      <input type="hidden" name="boardId" value={boardId} />
-                      <input type="hidden" name="cellId" value={cell.id} />
-                      <Button
-                        type="submit"
-                        size="xs"
-                        fullWidth
-                        color={checkedByMe ? "red" : "green"}
-                        variant={checkedByMe ? "light" : "filled"}
-                      >
-                        {checkedByMe ? "Ta bort mig" : "Jag gjorde detta"}
-                      </Button>
-                    </form>
-                  </Stack>
-                </Card>
-              );
-            })}
-          </div>
+          <BingoGrid
+            teamId={teamId}
+            boardId={boardId}
+            boardWidth={board.width}
+            cells={gridCells}
+            linkedMembers={linkedMembers}
+          />
         )}
       </Stack>
     </main>
