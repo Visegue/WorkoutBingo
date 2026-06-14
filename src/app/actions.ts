@@ -421,6 +421,95 @@ export async function autoFitTaskCounts(formData: FormData) {
   revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
 }
 
+// =============================================================
+// Autofill tasks
+// =============================================================
+
+const AUTOFILL_POOL = [
+  "Spring 5 km",
+  "Spring 10 km",
+  "Spring 3 km",
+  "Målvaktsträning",
+  "Skotträning",
+  "Spela match med kompisar",
+  "Backträning",
+  "Intervallträning",
+  "Knäkontroll",
+  "Kolla på en match",
+  "Passningsträning",
+  "Jonglering",
+];
+
+export async function autofillTasks(formData: FormData) {
+  const boardId = uuid.parse(formData.get("boardId"));
+  const teamId = uuid.parse(formData.get("teamId"));
+  const { supabase } = await requireLeader(teamId);
+
+  const { data: board, error: boardError } = await supabase
+    .from("boards")
+    .select("id, width, height, status")
+    .eq("id", boardId)
+    .eq("team_id", teamId)
+    .single();
+  if (boardError) throw boardError;
+  if (board.status !== "draft") throw new Error("Board must be a draft");
+
+  const { data: existingTasks, error: tasksError } = await supabase
+    .from("tasks")
+    .select("id, title, appearance_count")
+    .eq("board_id", boardId);
+  if (tasksError) throw tasksError;
+
+  const boardCells = board.width * board.height;
+  const usedSlots = (existingTasks ?? []).reduce(
+    (sum, t) => sum + t.appearance_count,
+    0,
+  );
+  let remaining = boardCells - usedSlots;
+  if (remaining <= 0) throw new Error("Board is already full");
+
+  // Filter out tasks already on the board
+  const existingTitles = new Set(
+    (existingTasks ?? []).map((t) => t.title.toLowerCase()),
+  );
+  const available = shuffle(
+    AUTOFILL_POOL.filter((t) => !existingTitles.has(t.toLowerCase())),
+  );
+  if (available.length === 0) throw new Error("No new tasks available to add");
+
+  // Assign random appearance counts (1-3) to each task
+  const newTasks: { title: string; count: number }[] = [];
+  let i = 0;
+  while (remaining > 0 && i < available.length) {
+    const maxCount = Math.min(3, remaining);
+    const count = Math.max(1, Math.floor(Math.random() * maxCount) + 1);
+    newTasks.push({ title: available[i], count });
+    remaining -= count;
+    i++;
+  }
+
+  // If pool exhausted but slots remain, distribute extra across chosen tasks
+  while (remaining > 0) {
+    for (let j = 0; j < newTasks.length && remaining > 0; j++) {
+      newTasks[j].count += 1;
+      remaining -= 1;
+    }
+  }
+
+  // Insert all new tasks
+  const { error: insertError } = await supabase.from("tasks").insert(
+    newTasks.map((t) => ({
+      board_id: boardId,
+      title: t.title,
+      description: "",
+      appearance_count: t.count,
+    })),
+  );
+  if (insertError) throw insertError;
+
+  revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
+}
+
 export async function generateBoard(formData: FormData) {
   const boardId = uuid.parse(formData.get("boardId"));
   const teamId = uuid.parse(formData.get("teamId"));

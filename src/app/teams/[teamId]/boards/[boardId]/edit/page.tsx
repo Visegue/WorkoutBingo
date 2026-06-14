@@ -19,6 +19,7 @@ import {
 import {
   addTask,
   autoFitTaskCounts,
+  autofillTasks,
   deleteTask,
   generateBoard,
   updateBoardSlug,
@@ -223,6 +224,15 @@ export default async function EditBoardPage({
               ) : null}
             </div>
             <Stack gap="xs" align="flex-end">
+              {isDraft && totalAppearances < boardCells ? (
+                <form action={autofillTasks}>
+                  <input type="hidden" name="teamId" value={teamId} />
+                  <input type="hidden" name="boardId" value={boardId} />
+                  <Button type="submit" color="green" variant="light">
+                    Autofyll uppgifter
+                  </Button>
+                </form>
+              ) : null}
               {isDraft ? (
                 <form action={autoFitTaskCounts}>
                   <input type="hidden" name="teamId" value={teamId} />

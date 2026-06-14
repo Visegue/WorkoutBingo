@@ -9,11 +9,12 @@ import {
   TextInput,
   Textarea,
 } from "@mantine/core";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createBoard } from "@/app/actions";
 
 export function CreateBoardButton({ teamId }: { teamId: string }) {
   const [opened, setOpened] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <>
@@ -31,8 +32,9 @@ export function CreateBoardButton({ teamId }: { teamId: string }) {
         onClose={() => setOpened(false)}
         title="Ny bingobricka"
         centered
+        withinPortal={false}
       >
-        <form action={createBoard}>
+        <form ref={formRef} action={createBoard}>
           <input type="hidden" name="teamId" value={teamId} />
           <Stack>
             <TextInput
