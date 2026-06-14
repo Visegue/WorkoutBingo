@@ -9,14 +9,19 @@ Team-based task bingo for soccer teams during summer breaks.
 - Configurable bingo board width/height
 - Tasks can appear multiple times on a randomized bingo board
 - Generated bingo boards are stable across devices
-- Kids check/uncheck their own cells and see team progress
+- Public board URLs — anyone can check off tasks (trusted community model)
+- Members (players) are pre-created by leaders, each with a unique color
+- Team progress: a cell is "done" when any member checks it off
+- Member badges on cells show who completed each task
+- Autofill boards with randomized soccer training tasks
 
 ## Tech
 
-- Next.js App Router
-- TypeScript
-- Mantine UI
-- Supabase Auth/Postgres/RLS
+- Next.js 16 App Router + TypeScript
+- Mantine 9 UI + @tabler/icons-react
+- Tailwind 4
+- Supabase Auth, Postgres, RLS
+- Zod 4
 - Bun
 - Vercel deployment target
 
@@ -31,7 +36,7 @@ bun run dev
 ## Supabase
 
 1. Create a Supabase project.
-2. Run `supabase/migrations/0001_initial_schema.sql` in the SQL editor or via Supabase CLI.
+2. Run all migrations in `supabase/migrations/` in order (0001 through 0006) via the SQL editor or Supabase CLI.
 3. Enable Auth providers:
    - Email magic links
    - Google OAuth
