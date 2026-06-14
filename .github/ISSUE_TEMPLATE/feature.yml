@@ -1,0 +1,20 @@
+name: Feature
+description: Request or track product work
+title: "feat: "
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation

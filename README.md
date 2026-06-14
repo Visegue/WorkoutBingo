@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Task Bingo
 
-## Getting Started
+Team-based task bingo for soccer teams during summer breaks.
 
-First, run the development server:
+## Features
+
+- Supabase login with Google OAuth or email magic links
+- Leaders create teams, invite codes, and multiple boards per team
+- Configurable board width/height
+- Tasks can appear multiple times on a randomized board
+- Generated boards are stable across devices
+- Kids check/uncheck their own cells and see team progress
+
+## Tech
+
+- Next.js App Router
+- TypeScript
+- Mantine UI
+- Supabase Auth/Postgres/RLS
+- Bun
+- Vercel deployment target
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+cp .env.example .env.local
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Supabase
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Create a Supabase project.
+2. Run `supabase/migrations/0001_initial_schema.sql` in the SQL editor or via Supabase CLI.
+3. Enable Auth providers:
+   - Email magic links
+   - Google OAuth
+4. Add redirect URL: `http://localhost:3000/auth/callback`.
+5. For Vercel, add `https://your-domain.vercel.app/auth/callback`.
+6. Fill `.env.local`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-## Learn More
+## Validation
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+bun run lint
+bun run typecheck
+bun run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy to Vercel and set the same environment variables. Connect the GitHub repo after creating/pushing it.

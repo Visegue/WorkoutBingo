@@ -1,0 +1,106 @@
+import {
+  Button,
+  Card,
+  Group,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { createTeam, joinInvite, signOut } from "@/app/actions";
+import { SetupRequired } from "@/app/setup-required";
+import { ensureProfile } from "@/lib/domain";
+import { hasSupabaseEnv } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function Dashboard() {
+  if (!hasSupabaseEnv()) return <SetupRequired />;
+
+  const user = await ensureProfile();
+  if (!user) return null;
+  const supabase = await createClient();
+  const { data: memberships } = await supabase
+    .from("team_members")
+    .select("team_id, role")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  const teamIds = memberships?.map((membership) => membership.team_id) ?? [];
+  const { data: teams } = teamIds.length
+    ? await supabase.from("teams").select("id, name").in("id", teamIds)
+    : { data: [] };
+  const teamById = new Map(teams?.map((team) => [team.id, team]));
+
+  return (
+    <main className="page-shell">
+      <Group justify="space-between" mb="xl">
+        <div>
+          <Title>Översikt</Title>
+          <Text c="dimmed">Inloggad som {user.email}</Text>
+        </div>
+        <form action={signOut}>
+          <Button type="submit" variant="subtle" color="red">
+            Logga ut
+          </Button>
+        </form>
+      </Group>
+      <div className="card-grid">
+        <Card radius="lg" p="lg" withBorder>
+          <Title order={2}>Dina lag</Title>
+          <Stack mt="md">
+            {memberships?.length ? (
+              memberships.map((membership) => {
+                const team = teamById.get(membership.team_id);
+                return team ? (
+                  <Button
+                    key={team.id}
+                    component="a"
+                    href={`/teams/${team.id}`}
+                    variant="light"
+                    color="green"
+                    justify="space-between"
+                  >
+                    {team.name} ({membership.role === "leader" ? "ledare" : "spelare"})
+                  </Button>
+                ) : null;
+              })
+            ) : (
+              <Text c="dimmed">Inga lag ännu.</Text>
+            )}
+          </Stack>
+        </Card>
+        <Card radius="lg" p="lg" withBorder>
+          <Title order={2}>Skapa lag</Title>
+          <form action={createTeam}>
+            <Stack mt="md">
+              <TextInput
+                name="name"
+                label="Lagnamn"
+                required
+                placeholder="Flickor 2013"
+              />
+              <Button type="submit" color="green">
+                Skapa som ledare
+              </Button>
+            </Stack>
+          </form>
+        </Card>
+        <Card radius="lg" p="lg" withBorder>
+          <Title order={2}>Gå med i lag</Title>
+          <form action={joinInvite}>
+            <Stack mt="md">
+              <TextInput
+                name="code"
+                label="Inbjudningskod"
+                required
+                placeholder="ABC123"
+              />
+              <Button type="submit" color="green" variant="light">
+                Gå med
+              </Button>
+            </Stack>
+          </form>
+        </Card>
+      </div>
+    </main>
+  );
+}
