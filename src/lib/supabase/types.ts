@@ -68,6 +68,7 @@ export type Database = {
           id: string;
           team_id: string;
           display_name: string;
+          color: string;
           created_by: string;
           created_at: string;
         };
@@ -75,10 +76,11 @@ export type Database = {
           id?: string;
           team_id: string;
           display_name: string;
+          color?: string;
           created_by: string;
           created_at?: string;
         };
-        Update: { display_name?: string };
+        Update: { display_name?: string; color?: string };
         Relationships: [];
       };
       boards: {

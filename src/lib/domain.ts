@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/env";
 
+// Re-export for server-side consumers that already import from domain
+export { MEMBER_PALETTE, pickMemberColor } from "@/lib/constants";
+
 export async function getUser() {
   if (!hasSupabaseEnv()) return null;
 

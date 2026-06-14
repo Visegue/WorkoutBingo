@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   generateSlug,
+  pickMemberColor,
   randomInviteCode,
   shuffle,
   slugWithSuffix,
@@ -143,9 +144,18 @@ export async function createMember(formData: FormData) {
   const teamId = uuid.parse(formData.get("teamId"));
   const displayName = text.max(80).parse(formData.get("displayName"));
   const { supabase, user } = await requireLeader(teamId);
+
+  // Count existing members to pick a unique color
+  const { count } = await supabase
+    .from("members")
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", teamId);
+  const color = pickMemberColor(count ?? 0);
+
   const { error } = await supabase.from("members").insert({
     team_id: teamId,
     display_name: displayName,
+    color,
     created_by: user.id,
   });
   if (error) {
@@ -179,6 +189,24 @@ export async function deleteMember(formData: FormData) {
   const { error } = await supabase
     .from("members")
     .delete()
+    .eq("id", memberId)
+    .eq("team_id", teamId);
+  if (error) throw error;
+  revalidatePath(`/teams/${teamId}/members`);
+}
+
+export async function updateMemberColor(formData: FormData) {
+  const memberId = uuid.parse(formData.get("memberId"));
+  const teamId = uuid.parse(formData.get("teamId"));
+  const color = z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color")
+    .parse(formData.get("color"));
+  const { supabase } = await requireLeader(teamId);
+  const { error } = await supabase
+    .from("members")
+    .update({ color })
     .eq("id", memberId)
     .eq("team_id", teamId);
   if (error) throw error;

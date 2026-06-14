@@ -1,6 +1,13 @@
 "use client";
 
-import { Button, Card, Select, Stack, Text } from "@mantine/core";
+import {
+  Card,
+  Group,
+  Select,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
@@ -14,7 +21,16 @@ type CellData = {
 type Member = {
   id: string;
   display_name: string;
+  color: string;
 };
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 function useLocalStorage(key: string) {
   const subscribe = useMemo(
@@ -41,6 +57,23 @@ function useLocalStorage(key: string) {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
+function MemberSelectOption({ label, color }: { label: string; color: string }) {
+  return (
+    <Group gap="xs" wrap="nowrap">
+      <div
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          backgroundColor: color,
+          flexShrink: 0,
+        }}
+      />
+      <Text size="sm">{label}</Text>
+    </Group>
+  );
+}
+
 export function PublicBingoGrid({
   slug,
   boardWidth,
@@ -63,6 +96,13 @@ export function PublicBingoGrid({
     return null;
   }, [storedValue, members]);
 
+  // Map member id -> member data for quick lookup
+  const memberMap = useMemo(() => {
+    const map = new Map<string, Member>();
+    members.forEach((m) => map.set(m.id, m));
+    return map;
+  }, [members]);
+
   const handleMemberChange = useCallback(
     (val: string | null) => {
       if (val) {
@@ -75,20 +115,38 @@ export function PublicBingoGrid({
     [storageKey],
   );
 
-  const handleCheck = useCallback(
-    async (cellId: string, memberId: string, isChecked: boolean) => {
+  const handleCellClick = useCallback(
+    async (cellId: string) => {
+      if (!selectedMemberId) return;
+
+      // Check if this member already checked this cell
+      const cell = cells.find((c) => c.id === cellId);
+      const isChecked = cell?.checks.some(
+        (c) => c.member_id === selectedMemberId,
+      );
+
       const method = isChecked ? "DELETE" : "POST";
       await fetch(`/api/boards/${slug}/check`, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cellId, memberId }),
+        body: JSON.stringify({ cellId, memberId: selectedMemberId }),
       });
       router.refresh();
     },
-    [slug, router],
+    [slug, router, selectedMemberId, cells],
   );
 
   const noMembers = members.length === 0;
+
+  // Build select data with color info for renderOption
+  const selectData = useMemo(
+    () =>
+      members.map((m) => ({
+        value: m.id,
+        label: m.display_name,
+      })),
+    [members],
+  );
 
   return (
     <Stack gap="md">
@@ -103,14 +161,33 @@ export function PublicBingoGrid({
       ) : (
         <Select
           label="Kryssa av som"
-          data={members.map((m) => ({
-            value: m.id,
-            label: m.display_name,
-          }))}
+          data={selectData}
           value={selectedMemberId}
           onChange={handleMemberChange}
           placeholder="Välj spelare..."
           searchable
+          renderOption={({ option }) => {
+            const member = memberMap.get(option.value);
+            return (
+              <MemberSelectOption
+                label={option.label}
+                color={member?.color ?? "#ccc"}
+              />
+            );
+          }}
+          leftSection={
+            selectedMemberId ? (
+              <div
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: "50%",
+                  backgroundColor:
+                    memberMap.get(selectedMemberId)?.color ?? "#ccc",
+                }}
+              />
+            ) : undefined
+          }
         />
       )}
 
@@ -120,9 +197,11 @@ export function PublicBingoGrid({
         style={{ "--bingo-width": boardWidth } as React.CSSProperties}
       >
         {cells.map((cell) => {
+          const isFinished = cell.checks.length > 0;
           const checkedBySelected = selectedMemberId
             ? cell.checks.some((c) => c.member_id === selectedMemberId)
             : false;
+          const canClick = !!selectedMemberId;
 
           return (
             <Card
@@ -130,11 +209,38 @@ export function PublicBingoGrid({
               radius="lg"
               p="sm"
               withBorder
-              bg={checkedBySelected ? "green.0" : "white"}
+              bg={isFinished ? "gray.1" : "white"}
+              style={{
+                cursor: canClick ? "pointer" : "default",
+                border: checkedBySelected
+                  ? "2px solid var(--mantine-color-green-5)"
+                  : undefined,
+                transition: "background 0.15s",
+                position: "relative",
+              }}
+              onClick={() => canClick && handleCellClick(cell.id)}
             >
-              <Stack gap="xs" justify="space-between" h="100%">
+              {isFinished && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    fontSize: 14,
+                    lineHeight: 1,
+                    color: "var(--mantine-color-green-6)",
+                  }}
+                >
+                  ✓
+                </div>
+              )}
+              <Stack gap={4} justify="space-between" h="100%">
                 <div>
-                  <Text fw={800} size="sm">
+                  <Text
+                    fw={800}
+                    size="sm"
+                    c={isFinished ? "dimmed" : undefined}
+                  >
                     {cell.task?.title}
                   </Text>
                   {cell.task?.description ? (
@@ -143,31 +249,59 @@ export function PublicBingoGrid({
                     </Text>
                   ) : null}
                 </div>
-                <Text size="xs" c="dimmed">
-                  {cell.checks.length} kryss
-                </Text>
-                {selectedMemberId ? (
-                  <Button
-                    size="xs"
-                    fullWidth
-                    color={checkedBySelected ? "red" : "green"}
-                    variant={checkedBySelected ? "light" : "filled"}
-                    onClick={() =>
-                      handleCheck(cell.id, selectedMemberId, checkedBySelected)
-                    }
-                  >
-                    {checkedBySelected ? "Ta bort" : "Klar!"}
-                  </Button>
-                ) : (
-                  <Button size="xs" fullWidth disabled>
-                    Välj spelare
-                  </Button>
-                )}
+                {/* Member badges row - always rendered for consistent height */}
+                <Group gap={4} mt={4} style={{ minHeight: 22 }}>
+                  {cell.checks.map((check) => {
+                    const member = memberMap.get(check.member_id);
+                    const name = member?.display_name ?? "?";
+                    const color = member?.color ?? "#ccc";
+                    return (
+                      <Tooltip key={check.member_id} label={name}>
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: "50%",
+                            backgroundColor: color,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              color: "white",
+                              lineHeight: 1,
+                              userSelect: "none",
+                            }}
+                          >
+                            {getInitials(name)}
+                          </span>
+                        </div>
+                      </Tooltip>
+                    );
+                  })}
+                </Group>
               </Stack>
             </Card>
           );
         })}
       </div>
+
+      {/* Helper text */}
+      {selectedMemberId && (
+        <Text size="xs" c="dimmed" ta="center">
+          Tryck på en ruta för att kryssa av / ångra
+        </Text>
+      )}
+      {!selectedMemberId && !noMembers && (
+        <Text size="xs" c="dimmed" ta="center">
+          Välj en spelare ovan för att kryssa av rutor
+        </Text>
+      )}
     </Stack>
   );
 }

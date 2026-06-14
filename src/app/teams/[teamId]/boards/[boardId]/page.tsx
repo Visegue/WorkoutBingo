@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   Card,
-  Code,
   Group,
   Progress,
   Stack,
@@ -64,7 +63,7 @@ export default async function BoardPage({
         .maybeSingle(),
       supabase
         .from("members")
-        .select("id, display_name")
+        .select("id, display_name, color")
         .eq("team_id", teamId)
         .order("display_name"),
     ]);
@@ -96,6 +95,7 @@ export default async function BoardPage({
   const allMembers = (members ?? []).map((m) => ({
     id: m.id,
     display_name: m.display_name,
+    color: m.color,
   }));
 
   return (
@@ -130,7 +130,15 @@ export default async function BoardPage({
           <Card radius="lg" p="sm" withBorder>
             <Group gap="xs">
               <Text size="sm" fw={600}>Publik länk:</Text>
-              <Code>{siteUrl}/b/{board.slug}</Code>
+              <Text
+                component="a"
+                href={`/b/${board.slug}`}
+                size="sm"
+                c="blue"
+                td="underline"
+              >
+                {siteUrl}/b/{board.slug}
+              </Text>
             </Group>
           </Card>
         ) : null}

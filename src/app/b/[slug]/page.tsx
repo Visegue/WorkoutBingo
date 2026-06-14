@@ -64,7 +64,7 @@ export default async function PublicBoardPage({
       .order("position"),
     supabase
       .from("members")
-      .select("id, display_name")
+      .select("id, display_name, color")
       .eq("team_id", board.team_id)
       .order("display_name"),
   ]);
@@ -85,7 +85,11 @@ export default async function PublicBoardPage({
   const allMembers = (members ?? []).map((m) => ({
     id: m.id,
     display_name: m.display_name,
+    color: m.color,
   }));
+
+  const completedCells = gridCells.filter((c) => c.checks.length > 0).length;
+  const progressPercent = totalCells > 0 ? Math.round((completedCells / totalCells) * 100) : 0;
 
   return (
     <main className="page-shell">
@@ -98,11 +102,11 @@ export default async function PublicBoardPage({
           <Group justify="space-between" mb="sm">
             <Badge color="green">aktiv</Badge>
             <Text fw={700}>
-              {totalCells} rutor
+              {completedCells} / {totalCells} rutor klara
             </Text>
           </Group>
           <Progress
-            value={0}
+            value={progressPercent}
             color="green"
             size="lg"
             radius="xl"
