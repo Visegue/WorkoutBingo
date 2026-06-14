@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { safeNextPath } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/dashboard";
+  const next = safeNextPath(url.searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();

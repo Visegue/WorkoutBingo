@@ -5,10 +5,10 @@ Team-based task bingo for soccer teams during summer breaks.
 ## Features
 
 - Supabase login with Google OAuth or email magic links
-- Leaders create teams, invite codes, and multiple boards per team
-- Configurable board width/height
-- Tasks can appear multiple times on a randomized board
-- Generated boards are stable across devices
+- Leaders create teams, invite codes, and multiple bingo boards per team
+- Configurable bingo board width/height
+- Tasks can appear multiple times on a randomized bingo board
+- Generated bingo boards are stable across devices
 - Kids check/uncheck their own cells and see team progress
 
 ## Tech

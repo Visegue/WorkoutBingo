@@ -83,15 +83,15 @@ export default async function EditBoardPage({
               c="dimmed"
               size="sm"
             >
-              Tillbaka till bricka
+              Tillbaka till bingobricka
             </Text>
             <Title>Redigera {board.title}</Title>
           </div>
         </Group>
         {!isDraft ? (
-          <Alert color="yellow" title="Aktiv bricka">
-            Den här brickan har framsteg. Om du genererar om den tas alla kryss
-            bort och en ny slumpad layout skapas.
+          <Alert color="yellow" title="Aktiv bingobricka">
+            Den här bingobrickan har framsteg. Om du genererar om den tas alla
+            kryss bort och en ny slumpad layout skapas.
           </Alert>
         ) : null}
         <div className="card-grid">
@@ -162,7 +162,7 @@ export default async function EditBoardPage({
                 />
                 <TextInput
                   name="appearanceCount"
-                  label="Antal gånger på brickan"
+                  label="Antal gånger på bingobrickan"
                   type="number"
                   min={1}
                   defaultValue={1}
@@ -218,7 +218,7 @@ export default async function EditBoardPage({
                   disabled={totalAppearances !== boardCells}
                 >
                   {isDraft
-                    ? "Generera bricka"
+                    ? "Generera bingobricka"
                     : "Nollställ framsteg och generera om"}
                 </Button>
               </form>

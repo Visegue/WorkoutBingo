@@ -50,7 +50,7 @@ export default async function Home() {
             {
               title: "Stabil slumpning",
               description:
-                "Genererade rutor sparas så att alla enheter visar samma bricka.",
+                "Genererade rutor sparas så att alla enheter visar samma bingobricka.",
             },
             {
               title: "Lagets framsteg",

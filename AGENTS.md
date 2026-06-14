@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Task Bingo is a Next.js app for soccer teams to complete shared summer task bingo boards. Leaders create teams, boards, tasks, and invite codes. Kids join teams, view generated boards, and check/uncheck their own cells.
+Task Bingo is a Next.js app for soccer teams to complete shared summer task bingo boards. Leaders create teams, bingo boards, tasks, and invite codes. Kids join teams, view generated bingo boards, and check/uncheck their own cells.
 
 ## Stack
 
@@ -28,8 +28,8 @@ Copy `.env.example` to `.env.local` and fill Supabase values. Never commit real 
 
 - Server Functions live in `src/app/actions.ts` and must authenticate/authorize before mutation.
 - Supabase RLS is defined in `supabase/migrations/0001_initial_schema.sql`.
-- Generated board cells are persisted in `board_cells`; never randomize on read.
-- Active board reset/regeneration deletes checks and cells, then writes a new randomized layout.
+- Generated bingo board cells are persisted in `board_cells`; never randomize on read.
+- Active bingo board reset/regeneration deletes checks and cells, then writes a new randomized layout.
 
 ## Definition Of Done
 

@@ -12,15 +12,17 @@ import {
 import { signInWithEmail, signInWithGoogle } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
 import { hasSupabaseEnv } from "@/lib/env";
+import { safeNextPath } from "@/lib/navigation";
 
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string }>;
+  searchParams: Promise<{ sent?: string; next?: string }>;
 }) {
   if (!hasSupabaseEnv()) return <SetupRequired />;
 
   const params = await searchParams;
+  const next = safeNextPath(params.next);
 
   return (
     <main className="page-shell">
@@ -41,13 +43,18 @@ export default async function Login({
           {params.sent ? (
             <Alert color="green">Kontrollera din e-post för en inloggningslänk.</Alert>
           ) : null}
+          {next !== "/dashboard" ? (
+            <Alert color="blue">Du fortsätter till inbjudan efter inloggning.</Alert>
+          ) : null}
           <form action={signInWithGoogle}>
+            <input type="hidden" name="next" value={next} />
             <Button type="submit" fullWidth color="green" variant="filled">
               Fortsätt med Google
             </Button>
           </form>
           <Divider label="eller" />
           <form action={signInWithEmail}>
+            <input type="hidden" name="next" value={next} />
             <Stack gap="sm">
               <TextInput
                 name="email"
