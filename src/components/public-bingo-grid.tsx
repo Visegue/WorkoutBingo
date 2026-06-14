@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, Card, Select, Stack, Text } from "@mantine/core";
-import { useMemo, useSyncExternalStore } from "react";
-import { checkCell, uncheckCell } from "@/app/actions";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 
 type CellData = {
   id: string;
@@ -11,7 +11,7 @@ type CellData = {
   checks: { member_id: string }[];
 };
 
-type LinkedMember = {
+type Member = {
   id: string;
   display_name: string;
 };
@@ -41,42 +41,54 @@ function useLocalStorage(key: string) {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-export function BingoGrid({
-  teamId,
-  boardId,
+export function PublicBingoGrid({
+  slug,
   boardWidth,
   cells,
-  linkedMembers,
+  members,
 }: {
-  teamId: string;
-  boardId: string;
+  slug: string;
   boardWidth: number;
   cells: CellData[];
-  linkedMembers: LinkedMember[];
+  members: Member[];
 }) {
-  const storageKey = `board-${boardId}-selected-member`;
+  const storageKey = `board-${slug}-selected-member`;
   const storedValue = useLocalStorage(storageKey);
+  const router = useRouter();
 
-  // Determine selected member: stored value if valid, else first linked member
   const selectedMemberId = useMemo(() => {
-    if (storedValue && linkedMembers.some((m) => m.id === storedValue)) {
+    if (storedValue && members.some((m) => m.id === storedValue)) {
       return storedValue;
     }
-    if (linkedMembers.length === 1) return linkedMembers[0].id;
     return null;
-  }, [storedValue, linkedMembers]);
+  }, [storedValue, members]);
 
-  const handleMemberChange = (val: string | null) => {
-    if (val) {
-      localStorage.setItem(storageKey, val);
-      // Trigger re-render by dispatching a storage event manually
-      window.dispatchEvent(
-        new StorageEvent("storage", { key: storageKey, newValue: val }),
-      );
-    }
-  };
+  const handleMemberChange = useCallback(
+    (val: string | null) => {
+      if (val) {
+        localStorage.setItem(storageKey, val);
+        window.dispatchEvent(
+          new StorageEvent("storage", { key: storageKey, newValue: val }),
+        );
+      }
+    },
+    [storageKey],
+  );
 
-  const noMembers = linkedMembers.length === 0;
+  const handleCheck = useCallback(
+    async (cellId: string, memberId: string, isChecked: boolean) => {
+      const method = isChecked ? "DELETE" : "POST";
+      await fetch(`/api/boards/${slug}/check`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cellId, memberId }),
+      });
+      router.refresh();
+    },
+    [slug, router],
+  );
+
+  const noMembers = members.length === 0;
 
   return (
     <Stack gap="md">
@@ -84,22 +96,23 @@ export function BingoGrid({
       {noMembers ? (
         <Card radius="lg" p="md" withBorder bg="yellow.0">
           <Text size="sm">
-            Du är inte kopplad till någon spelare i detta lag. Be en ledare
-            koppla dig, eller gå till lagsidan för att koppla dig själv.
+            Inga spelare har lagts till ännu. Be lagets ledare lägga till
+            spelare.
           </Text>
         </Card>
-      ) : linkedMembers.length > 1 ? (
+      ) : (
         <Select
           label="Kryssa av som"
-          data={linkedMembers.map((m) => ({
+          data={members.map((m) => ({
             value: m.id,
             label: m.display_name,
           }))}
           value={selectedMemberId}
           onChange={handleMemberChange}
           placeholder="Välj spelare..."
+          searchable
         />
-      ) : null}
+      )}
 
       {/* Bingo grid */}
       <div
@@ -134,25 +147,17 @@ export function BingoGrid({
                   {cell.checks.length} kryss
                 </Text>
                 {selectedMemberId ? (
-                  <form action={checkedBySelected ? uncheckCell : checkCell}>
-                    <input type="hidden" name="teamId" value={teamId} />
-                    <input type="hidden" name="boardId" value={boardId} />
-                    <input type="hidden" name="cellId" value={cell.id} />
-                    <input
-                      type="hidden"
-                      name="memberId"
-                      value={selectedMemberId}
-                    />
-                    <Button
-                      type="submit"
-                      size="xs"
-                      fullWidth
-                      color={checkedBySelected ? "red" : "green"}
-                      variant={checkedBySelected ? "light" : "filled"}
-                    >
-                      {checkedBySelected ? "Ta bort" : "Klar!"}
-                    </Button>
-                  </form>
+                  <Button
+                    size="xs"
+                    fullWidth
+                    color={checkedBySelected ? "red" : "green"}
+                    variant={checkedBySelected ? "light" : "filled"}
+                    onClick={() =>
+                      handleCheck(cell.id, selectedMemberId, checkedBySelected)
+                    }
+                  >
+                    {checkedBySelected ? "Ta bort" : "Klar!"}
+                  </Button>
                 ) : (
                   <Button size="xs" fullWidth disabled>
                     Välj spelare

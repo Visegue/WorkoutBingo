@@ -1,7 +1,7 @@
 import { Alert, Card, Stack, Text, Title } from "@mantine/core";
 import { redirect } from "next/navigation";
-import { joinViaInviteLink } from "@/app/actions";
 import { ensureProfile } from "@/lib/domain";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function InvitePage({
   params,
@@ -16,14 +16,20 @@ export default async function InvitePage({
     redirect(`/login?next=${encodeURIComponent(invitePath)}`);
   }
 
-  const invite = await joinViaInviteLink(code);
+  const supabase = await createClient();
+  const { data: invite, error } = await supabase
+    .from("team_invites")
+    .select("team_id")
+    .eq("code", code.toUpperCase())
+    .is("revoked_at", null)
+    .maybeSingle();
 
-  if (invite) {
-    if (invite.role === "leader") {
-      redirect(`/teams/${invite.team_id}`);
-    } else {
-      redirect(`/teams/${invite.team_id}/join`);
-    }
+  if (!error && invite) {
+    // Invite found — make user a leader of the team
+    await supabase
+      .from("team_members")
+      .upsert({ team_id: invite.team_id, user_id: user.id, role: "leader" });
+    redirect(`/teams/${invite.team_id}`);
   }
 
   return (

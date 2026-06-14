@@ -2,6 +2,7 @@ import {
   Alert,
   Button,
   Card,
+  Code,
   Group,
   Stack,
   Table,
@@ -20,11 +21,13 @@ import {
   autoFitTaskCounts,
   deleteTask,
   generateBoard,
+  updateBoardSlug,
   updateDraftBoard,
 } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
+import { DeleteBoardButton } from "@/components/delete-board-button";
 import { ensureProfile } from "@/lib/domain";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasSupabaseEnv, siteUrl } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function EditBoardPage({
@@ -138,6 +141,34 @@ export default async function EditBoardPage({
                 />
                 <Button type="submit" color="green" disabled={!isDraft}>
                   Spara utkast
+                </Button>
+              </Stack>
+            </form>
+          </Card>
+          <Card radius="lg" p="lg" withBorder>
+            <Title order={2}>Publik URL</Title>
+            {board.slug ? (
+              <Text size="sm" c="dimmed" mt="xs">
+                Nuvarande: <Code>{siteUrl}/b/{board.slug}</Code>
+              </Text>
+            ) : (
+              <Text size="sm" c="dimmed" mt="xs">
+                Genereras automatiskt när brickan aktiveras, eller ställ in manuellt.
+              </Text>
+            )}
+            <form action={updateBoardSlug}>
+              <input type="hidden" name="teamId" value={teamId} />
+              <input type="hidden" name="boardId" value={boardId} />
+              <Stack mt="md">
+                <TextInput
+                  name="slug"
+                  label="URL-slug"
+                  placeholder="mitt-lag-sommaren-2026"
+                  defaultValue={board.slug ?? ""}
+                  description="Gemener, siffror och bindestreck. Måste vara unik."
+                />
+                <Button type="submit" color="green" variant="light">
+                  Spara URL
                 </Button>
               </Stack>
             </form>
@@ -267,6 +298,17 @@ export default async function EditBoardPage({
               ))}
             </TableTbody>
           </Table>
+        </Card>
+        <Card radius="lg" p="lg" withBorder>
+          <Title order={2} c="red">
+            Ta bort bingobricka
+          </Title>
+          <Text size="sm" c="dimmed" mt="xs">
+            Detta tar bort brickan, alla uppgifter och alla kryss permanent.
+          </Text>
+          <Group mt="md">
+            <DeleteBoardButton teamId={teamId} boardId={boardId} />
+          </Group>
         </Card>
       </Stack>
     </main>

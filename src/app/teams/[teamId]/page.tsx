@@ -2,29 +2,19 @@ import {
   Badge,
   Button,
   Card,
+  Code,
   Group,
-  Select,
   Stack,
   Text,
   TextInput,
-  Textarea,
   Title,
 } from "@mantine/core";
-import {
-  createBoard,
-  createInvite,
-  createMember,
-  linkAccountToMember,
-} from "@/app/actions";
+import { createInvite, createMember } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
+import { CreateBoardButton } from "@/components/create-board-button";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv, siteUrl } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
-
-const roleLabels = {
-  leader: "ledare",
-  kid: "spelare",
-} as const;
 
 const statusLabels = {
   draft: "utkast",
@@ -42,56 +32,35 @@ export default async function TeamPage({
   if (!user) return null;
   const { teamId } = await params;
   const supabase = await createClient();
-  const [
-    { data: team },
-    { data: member },
-    { data: boards },
-    { data: invites },
-    { data: members },
-    { data: myMemberLinks },
-  ] = await Promise.all([
-    supabase.from("teams").select("id, name").eq("id", teamId).single(),
-    supabase
-      .from("team_members")
-      .select("role")
-      .eq("team_id", teamId)
-      .eq("user_id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("boards")
-      .select("id, title, status, width, height, created_at")
-      .eq("team_id", teamId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("team_invites")
-      .select("code, role, created_at")
-      .eq("team_id", teamId)
-      .is("revoked_at", null)
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase
-      .from("members")
-      .select("id, display_name")
-      .eq("team_id", teamId)
-      .order("display_name"),
-    supabase
-      .from("member_accounts")
-      .select("member_id")
-      .eq("user_id", user.id),
-  ]);
+  const [{ data: team }, { data: member }, { data: boards }, { data: invites }, { data: members }] =
+    await Promise.all([
+      supabase.from("teams").select("id, name").eq("id", teamId).single(),
+      supabase
+        .from("team_members")
+        .select("role")
+        .eq("team_id", teamId)
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("boards")
+        .select("id, title, status, slug, width, height, created_at")
+        .eq("team_id", teamId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("team_invites")
+        .select("code, created_at")
+        .eq("team_id", teamId)
+        .is("revoked_at", null)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("members")
+        .select("id, display_name")
+        .eq("team_id", teamId)
+        .order("display_name"),
+    ]);
 
   const isLeader = member?.role === "leader";
-
-  // Check which members the current leader is linked to
-  const linkedMemberIds = new Set<string>();
-  if (myMemberLinks && myMemberLinks.length > 0 && members) {
-    const teamMemberIds = new Set(members.map((m) => m.id));
-    for (const link of myMemberLinks) {
-      if (teamMemberIds.has(link.member_id)) {
-        linkedMemberIds.add(link.member_id);
-      }
-    }
-  }
 
   return (
     <main className="page-shell">
@@ -101,28 +70,36 @@ export default async function TeamPage({
             Tillbaka till översikt
           </Text>
           <Title>{team?.name ?? "Lag"}</Title>
-          <Badge color={isLeader ? "green" : "blue"}>
-            {member?.role ? roleLabels[member.role] : "medlem"}
-          </Badge>
+          <Badge color="green">ledare</Badge>
         </div>
       </Group>
       <div className="card-grid">
         <Card radius="lg" p="lg" withBorder>
-          <Title order={2}>Bingobrickor</Title>
+          <Group justify="space-between">
+            <Title order={2}>Bingobrickor</Title>
+            {isLeader ? <CreateBoardButton teamId={teamId} /> : null}
+          </Group>
           <Stack mt="md">
             {boards?.length ? (
               boards.map((board) => (
-                <Button
-                  key={board.id}
-                  component="a"
-                  href={`/teams/${teamId}/boards/${board.id}`}
-                  variant="light"
-                  color="green"
-                  justify="space-between"
-                >
-                  {board.title} ({board.width}x{board.height},{" "}
-                  {statusLabels[board.status]})
-                </Button>
+                <div key={board.id}>
+                  <Button
+                    component="a"
+                    href={`/teams/${teamId}/boards/${board.id}`}
+                    variant="light"
+                    color="green"
+                    justify="space-between"
+                    fullWidth
+                  >
+                    {board.title} ({board.width}x{board.height},{" "}
+                    {statusLabels[board.status]})
+                  </Button>
+                  {board.slug ? (
+                    <Text size="xs" c="dimmed" mt={4}>
+                      Publik länk: {siteUrl}/b/{board.slug}
+                    </Text>
+                  ) : null}
+                </div>
               ))
             ) : (
               <Text c="dimmed">Inga brickor ännu.</Text>
@@ -133,31 +110,11 @@ export default async function TeamPage({
         {isLeader ? (
           <>
             <Card radius="lg" p="lg" withBorder>
-              <Title order={2}>Spelare</Title>
+              <Title order={2}>Spelare ({members?.length ?? 0})</Title>
               <Stack mt="md">
                 {members?.length ? (
                   members.map((m) => (
-                    <Group key={m.id} justify="space-between">
-                      <Text>{m.display_name}</Text>
-                      {!linkedMemberIds.has(m.id) ? (
-                        <form action={linkAccountToMember}>
-                          <input type="hidden" name="teamId" value={teamId} />
-                          <input type="hidden" name="memberId" value={m.id} />
-                          <Button
-                            type="submit"
-                            size="xs"
-                            variant="subtle"
-                            color="blue"
-                          >
-                            Koppla mig
-                          </Button>
-                        </form>
-                      ) : (
-                        <Badge size="sm" color="blue" variant="light">
-                          Kopplad
-                        </Badge>
-                      )}
-                    </Group>
+                    <Text key={m.id}>{m.display_name}</Text>
                   ))
                 ) : (
                   <Text c="dimmed">Inga spelare ännu.</Text>
@@ -187,84 +144,25 @@ export default async function TeamPage({
                 mt="md"
                 fullWidth
               >
-                Hantera spelare och konton
+                Hantera spelare
               </Button>
             </Card>
 
             <Card radius="lg" p="lg" withBorder>
-              <Title order={2}>Ny bingobricka</Title>
-              <form action={createBoard}>
-                <input type="hidden" name="teamId" value={teamId} />
-                <Stack mt="md">
-                  <TextInput
-                    name="title"
-                    label="Titel"
-                    required
-                    placeholder="Sommaren 2026"
-                  />
-                  <Group grow>
-                    <TextInput
-                      name="width"
-                      label="Bredd"
-                      type="number"
-                      min={2}
-                      max={10}
-                      defaultValue={5}
-                      required
-                    />
-                    <TextInput
-                      name="height"
-                      label="Höjd"
-                      type="number"
-                      min={2}
-                      max={10}
-                      defaultValue={5}
-                      required
-                    />
-                  </Group>
-                  <Textarea
-                    name="description"
-                    label="Beskrivning"
-                    placeholder="Vad ska spelarna göra i sommar?"
-                  />
-                  <Button type="submit" color="green">
-                    Skapa utkast
-                  </Button>
-                </Stack>
-              </form>
-            </Card>
-
-            <Card radius="lg" p="lg" withBorder>
-              <Title order={2}>Inbjudningar</Title>
+              <Title order={2}>Inbjudningar (ledare)</Title>
+              <Text size="sm" c="dimmed" mb="md">
+                Bjud in andra ledare som ska kunna redigera lag och brickor.
+              </Text>
               <form action={createInvite}>
                 <input type="hidden" name="teamId" value={teamId} />
-                <Stack mt="md">
-                  <Select
-                    name="role"
-                    label="Roll"
-                    data={[
-                      { value: "kid", label: "Spelare" },
-                      { value: "leader", label: "Ledare" },
-                    ]}
-                    defaultValue="kid"
-                  />
-                  <Button type="submit" color="green">
-                    Skapa inbjudningskod
-                  </Button>
-                </Stack>
+                <Button type="submit" color="green">
+                  Skapa inbjudningskod
+                </Button>
               </form>
               <Stack mt="md" gap="xs">
                 {invites?.map((invite) => (
                   <Group key={invite.code} gap="xs">
-                    <Text ff="monospace" size="sm">
-                      {invite.code}
-                    </Text>
-                    <Badge
-                      size="xs"
-                      color={invite.role === "leader" ? "orange" : "blue"}
-                    >
-                      {invite.role === "leader" ? "ledare" : "spelare"}
-                    </Badge>
+                    <Code>{invite.code}</Code>
                     <Text size="xs" c="dimmed">
                       {siteUrl}/invite/{invite.code}
                     </Text>

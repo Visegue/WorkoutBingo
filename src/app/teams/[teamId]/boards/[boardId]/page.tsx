@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Card,
+  Code,
   Group,
   Progress,
   Stack,
@@ -9,9 +10,9 @@ import {
   Title,
 } from "@mantine/core";
 import { SetupRequired } from "@/app/setup-required";
-import { BingoGrid } from "@/components/bingo-grid";
+import { PublicBingoGrid } from "@/components/public-bingo-grid";
 import { ensureProfile } from "@/lib/domain";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasSupabaseEnv, siteUrl } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
 const statusLabels = {
@@ -40,7 +41,7 @@ export default async function BoardPage({
   if (!user) return null;
   const { teamId, boardId } = await params;
   const supabase = await createClient();
-  const [{ data: board }, { data: cells }, { data: member }] =
+  const [{ data: board }, { data: cells }, { data: member }, { data: members }] =
     await Promise.all([
       supabase
         .from("boards")
@@ -61,6 +62,11 @@ export default async function BoardPage({
         .eq("team_id", teamId)
         .eq("user_id", user.id)
         .maybeSingle(),
+      supabase
+        .from("members")
+        .select("id, display_name")
+        .eq("team_id", teamId)
+        .order("display_name"),
     ]);
 
   if (!board)
@@ -70,33 +76,13 @@ export default async function BoardPage({
       </main>
     );
 
-  // Fetch linked members for the current user in this team
-  const { data: myLinks } = await supabase
-    .from("member_accounts")
-    .select("member_id")
-    .eq("user_id", user.id);
-
-  let linkedMembers: { id: string; display_name: string }[] = [];
-  if (myLinks && myLinks.length > 0) {
-    const { data: teamMembers } = await supabase
-      .from("members")
-      .select("id, display_name")
-      .eq("team_id", teamId)
-      .in("id", myLinks.map((l) => l.member_id));
-    linkedMembers = teamMembers ?? [];
-  }
-
   const typedCells = (cells ?? []) as Cell[];
   const totalCells = board.width * board.height;
-
-  // Count total checks across all members
   const totalCheckedCells = typedCells.filter(
     (cell) => cell.cell_checks.length > 0,
   ).length;
-
   const isLeader = member?.role === "leader";
 
-  // Transform cells for the client component
   const gridCells = typedCells.map((cell) => {
     const task = Array.isArray(cell.tasks) ? cell.tasks[0] : cell.tasks;
     return {
@@ -106,6 +92,11 @@ export default async function BoardPage({
       checks: cell.cell_checks,
     };
   });
+
+  const allMembers = (members ?? []).map((m) => ({
+    id: m.id,
+    display_name: m.display_name,
+  }));
 
   return (
     <main className="page-shell">
@@ -134,6 +125,16 @@ export default async function BoardPage({
             </Button>
           ) : null}
         </Group>
+
+        {board.slug ? (
+          <Card radius="lg" p="sm" withBorder>
+            <Group gap="xs">
+              <Text size="sm" fw={600}>Publik länk:</Text>
+              <Code>{siteUrl}/b/{board.slug}</Code>
+            </Group>
+          </Card>
+        ) : null}
+
         <Card radius="lg" p="lg" withBorder>
           <Group justify="space-between" mb="sm">
             <Badge color={board.status === "active" ? "green" : "gray"}>
@@ -157,14 +158,20 @@ export default async function BoardPage({
               generera den innan spelare kan kryssa i rutor.
             </Text>
           </Card>
-        ) : (
-          <BingoGrid
-            teamId={teamId}
-            boardId={boardId}
+        ) : board.slug ? (
+          <PublicBingoGrid
+            slug={board.slug}
             boardWidth={board.width}
             cells={gridCells}
-            linkedMembers={linkedMembers}
+            members={allMembers}
           />
+        ) : (
+          <Card radius="lg" p="lg" withBorder>
+            <Text>
+              Bingobrickan saknar en publik URL. Generera om den för att skapa
+              en.
+            </Text>
+          </Card>
         )}
       </Stack>
     </main>

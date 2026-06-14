@@ -40,3 +40,26 @@ export function shuffle<T>(items: T[]) {
   }
   return shuffled;
 }
+
+/**
+ * Generate a URL-safe slug from team name and board title.
+ * Format: "team-name-board-title" (lowercased, special chars replaced with hyphens).
+ */
+export function generateSlug(teamName: string, boardTitle: string): string {
+  const raw = `${teamName}-${boardTitle}`;
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip diacritics
+    .replace(/[^a-z0-9]+/g, "-") // non-alphanumeric → hyphen
+    .replace(/^-+|-+$/g, "") // trim leading/trailing hyphens
+    .slice(0, 60); // reasonable max length
+}
+
+/**
+ * Ensure slug uniqueness by appending a short random suffix if needed.
+ */
+export function slugWithSuffix(slug: string): string {
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${slug}-${suffix}`;
+}

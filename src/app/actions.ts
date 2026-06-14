@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { randomInviteCode, shuffle } from "@/lib/domain";
+import {
+  generateSlug,
+  randomInviteCode,
+  shuffle,
+  slugWithSuffix,
+} from "@/lib/domain";
 import { siteUrl } from "@/lib/env";
 import { safeNextPath } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -95,19 +100,15 @@ export async function createTeam(formData: FormData) {
 }
 
 // =============================================================
-// Invite actions
+// Invite actions (leader-only invites)
 // =============================================================
 
 export async function createInvite(formData: FormData) {
   const teamId = uuid.parse(formData.get("teamId"));
-  const role = z
-    .enum(["leader", "kid"])
-    .parse(formData.get("role") ?? "kid");
   const { supabase, user } = await requireLeader(teamId);
   const { error } = await supabase.from("team_invites").insert({
     team_id: teamId,
     code: randomInviteCode(),
-    role,
     created_by: user.id,
   });
   if (error) throw error;
@@ -115,16 +116,14 @@ export async function createInvite(formData: FormData) {
 }
 
 /**
- * Join a team via invite code.
- * For "leader" invites: user becomes a leader, redirected to team page.
- * For "kid" invites: user becomes a kid member, redirected to member selection page.
+ * Join a team via invite code. User becomes a leader.
  */
 export async function joinInvite(formData: FormData) {
   const code = text.max(40).parse(formData.get("code")).toUpperCase();
   const { supabase, user } = await requireUser();
   const { data, error } = await supabase
     .from("team_invites")
-    .select("team_id, role")
+    .select("team_id")
     .eq("code", code)
     .is("revoked_at", null)
     .maybeSingle();
@@ -132,39 +131,12 @@ export async function joinInvite(formData: FormData) {
 
   await supabase
     .from("team_members")
-    .upsert({ team_id: data.team_id, user_id: user.id, role: data.role });
-
-  if (data.role === "leader") {
-    redirect(`/teams/${data.team_id}`);
-  } else {
-    // Redirect to member selection page
-    redirect(`/teams/${data.team_id}/join`);
-  }
-}
-
-/**
- * Join via invite link (used by /invite/[code] page).
- * Returns the invite data without redirecting so the page can handle the flow.
- */
-export async function joinViaInviteLink(code: string) {
-  const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("team_invites")
-    .select("team_id, role")
-    .eq("code", code.toUpperCase())
-    .is("revoked_at", null)
-    .maybeSingle();
-  if (error || !data) return null;
-
-  await supabase
-    .from("team_members")
-    .upsert({ team_id: data.team_id, user_id: user.id, role: data.role });
-
-  return data;
+    .upsert({ team_id: data.team_id, user_id: user.id, role: "leader" });
+  redirect(`/teams/${data.team_id}`);
 }
 
 // =============================================================
-// Member actions
+// Member actions (leaders manage team members/players)
 // =============================================================
 
 export async function createMember(formData: FormData) {
@@ -213,115 +185,22 @@ export async function deleteMember(formData: FormData) {
   revalidatePath(`/teams/${teamId}/members`);
 }
 
-/**
- * Associate the current user with an existing member (during join flow or later).
- */
-export async function associateMember(formData: FormData) {
-  const memberId = uuid.parse(formData.get("memberId"));
-  const teamId = uuid.parse(formData.get("teamId"));
-  const { supabase, user } = await requireUser();
-
-  // Verify user is a team member
-  const { data: membership } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!membership) throw new Error("Not a team member");
-
-  // Verify the member belongs to this team
-  const { data: member } = await supabase
-    .from("members")
-    .select("id")
-    .eq("id", memberId)
-    .eq("team_id", teamId)
-    .maybeSingle();
-  if (!member) throw new Error("Member not found");
-
-  const { error } = await supabase
-    .from("member_accounts")
-    .upsert({ member_id: memberId, user_id: user.id });
-  if (error) throw error;
-  redirect(`/teams/${teamId}`);
-}
-
-/**
- * Create a new member and immediately associate the current user with it.
- * Used during the join flow when no existing member matches.
- */
-export async function createAndAssociateMember(formData: FormData) {
-  const teamId = uuid.parse(formData.get("teamId"));
-  const displayName = text.max(80).parse(formData.get("displayName"));
-  const { supabase, user } = await requireUser();
-
-  // Verify user is a team member
-  const { data: membership } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!membership) throw new Error("Not a team member");
-
-  // Create member (leader check not needed here; the user is creating themselves)
-  // We use the user's ID as created_by
-  const { data: member, error: memberError } = await supabase
-    .from("members")
-    .insert({
-      team_id: teamId,
-      display_name: displayName,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-  if (memberError) {
-    if (memberError.code === "23505")
-      throw new Error("Namnet finns redan i laget");
-    throw memberError;
-  }
-
-  const { error } = await supabase
-    .from("member_accounts")
-    .insert({ member_id: member.id, user_id: user.id });
-  if (error) throw error;
-  redirect(`/teams/${teamId}`);
-}
-
-/**
- * Leader unlinks an account from a member.
- */
-export async function unlinkAccount(formData: FormData) {
-  const memberId = uuid.parse(formData.get("memberId"));
-  const userId = uuid.parse(formData.get("userId"));
-  const teamId = uuid.parse(formData.get("teamId"));
-  const { supabase } = await requireLeader(teamId);
-  const { error } = await supabase
-    .from("member_accounts")
-    .delete()
-    .eq("member_id", memberId)
-    .eq("user_id", userId);
-  if (error) throw error;
-  revalidatePath(`/teams/${teamId}/members`);
-}
-
-/**
- * Leader links themselves (or another user) to a member.
- */
-export async function linkAccountToMember(formData: FormData) {
-  const memberId = uuid.parse(formData.get("memberId"));
-  const teamId = uuid.parse(formData.get("teamId"));
-  const { supabase, user } = await requireLeader(teamId);
-  const { error } = await supabase
-    .from("member_accounts")
-    .upsert({ member_id: memberId, user_id: user.id });
-  if (error) throw error;
-  revalidatePath(`/teams/${teamId}/members`);
-}
-
 // =============================================================
 // Board actions
 // =============================================================
+
+export async function deleteBoard(formData: FormData) {
+  const boardId = uuid.parse(formData.get("boardId"));
+  const teamId = uuid.parse(formData.get("teamId"));
+  const { supabase } = await requireLeader(teamId);
+  const { error } = await supabase
+    .from("boards")
+    .delete()
+    .eq("id", boardId)
+    .eq("team_id", teamId);
+  if (error) throw error;
+  redirect(`/teams/${teamId}`);
+}
 
 export async function createBoard(formData: FormData) {
   const teamId = uuid.parse(formData.get("teamId"));
@@ -344,6 +223,25 @@ export async function createBoard(formData: FormData) {
     .max(2000)
     .parse(formData.get("description") ?? "");
   const { supabase, user } = await requireLeader(teamId);
+
+  // Generate slug from team name + board title
+  const { data: team } = await supabase
+    .from("teams")
+    .select("name")
+    .eq("id", teamId)
+    .single();
+  let slug = generateSlug(team?.name ?? "team", title);
+
+  // Check uniqueness, add suffix if needed
+  const { data: existing } = await supabase
+    .from("boards")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (existing) {
+    slug = slugWithSuffix(slug);
+  }
+
   const { data, error } = await supabase
     .from("boards")
     .insert({
@@ -352,6 +250,7 @@ export async function createBoard(formData: FormData) {
       width,
       height,
       description,
+      slug,
       created_by: user.id,
     })
     .select("id")
@@ -389,6 +288,29 @@ export async function updateDraftBoard(formData: FormData) {
     .eq("team_id", teamId)
     .eq("status", "draft");
   if (error) throw error;
+  revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
+}
+
+export async function updateBoardSlug(formData: FormData) {
+  const boardId = uuid.parse(formData.get("boardId"));
+  const teamId = uuid.parse(formData.get("teamId"));
+  const slug = z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, "Slug must be lowercase, alphanumeric, hyphens only")
+    .parse(formData.get("slug"));
+  const { supabase } = await requireLeader(teamId);
+  const { error } = await supabase
+    .from("boards")
+    .update({ slug })
+    .eq("id", boardId)
+    .eq("team_id", teamId);
+  if (error) {
+    if (error.code === "23505") throw new Error("Denna URL är redan upptagen");
+    throw error;
+  }
   revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
 }
 
@@ -546,43 +468,15 @@ export async function generateBoard(formData: FormData) {
     .from("board_cells")
     .insert(cells);
   if (insertError) throw insertError;
+
   const { error: updateError } = await supabase
     .from("boards")
-    .update({ status: "active", generated_at: new Date().toISOString() })
+    .update({
+      status: "active",
+      generated_at: new Date().toISOString(),
+    })
     .eq("id", boardId)
     .eq("team_id", teamId);
   if (updateError) throw updateError;
   redirect(`/teams/${teamId}/boards/${boardId}`);
-}
-
-// =============================================================
-// Cell check actions (now member-based)
-// =============================================================
-
-export async function checkCell(formData: FormData) {
-  const cellId = uuid.parse(formData.get("cellId"));
-  const boardId = uuid.parse(formData.get("boardId"));
-  const teamId = uuid.parse(formData.get("teamId"));
-  const memberId = uuid.parse(formData.get("memberId"));
-  const { supabase } = await requireUser();
-  const { error } = await supabase
-    .from("cell_checks")
-    .insert({ cell_id: cellId, member_id: memberId });
-  if (error && error.code !== "23505") throw error;
-  revalidatePath(`/teams/${teamId}/boards/${boardId}`);
-}
-
-export async function uncheckCell(formData: FormData) {
-  const cellId = uuid.parse(formData.get("cellId"));
-  const boardId = uuid.parse(formData.get("boardId"));
-  const teamId = uuid.parse(formData.get("teamId"));
-  const memberId = uuid.parse(formData.get("memberId"));
-  const { supabase } = await requireUser();
-  const { error } = await supabase
-    .from("cell_checks")
-    .delete()
-    .eq("cell_id", cellId)
-    .eq("member_id", memberId);
-  if (error) throw error;
-  revalidatePath(`/teams/${teamId}/boards/${boardId}`);
 }
