@@ -7,8 +7,9 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { createTeam, joinInvite, signOut } from "@/app/actions";
+import { joinInvite, signOut } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
+import { CreateTeamButton } from "@/components/create-team-button";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +46,10 @@ export default async function Dashboard() {
       </Group>
       <div className="card-grid">
         <Card radius="lg" p="lg" withBorder>
-          <Title order={2}>Dina lag</Title>
+          <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
+            <Title order={2}>Dina lag</Title>
+            <CreateTeamButton />
+          </Group>
           <Stack mt="md">
             {memberships?.length ? (
               memberships.map((membership) => {
@@ -69,33 +73,17 @@ export default async function Dashboard() {
           </Stack>
         </Card>
         <Card radius="lg" p="lg" withBorder>
-          <Title order={2}>Skapa lag</Title>
-          <form action={createTeam}>
-            <Stack mt="md">
-              <TextInput
-                name="name"
-                label="Lagnamn"
-                required
-                placeholder="Flickor 2013"
-              />
-              <Button type="submit" color="green">
-                Skapa som ledare
-              </Button>
-            </Stack>
-          </form>
-        </Card>
-        <Card radius="lg" p="lg" withBorder>
-          <Title order={2}>Gå med i lag</Title>
+          <Title order={2}>Gå med som ledare</Title>
           <form action={joinInvite}>
             <Stack mt="md">
               <TextInput
                 name="code"
-                label="Inbjudningskod"
+                label="Ledarkod"
                 required
                 placeholder="ABC123"
               />
               <Button type="submit" color="green" variant="light">
-                Gå med
+                Gå med som ledare
               </Button>
             </Stack>
           </form>

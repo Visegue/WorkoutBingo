@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -45,6 +46,18 @@ async function requireLeader(teamId: string) {
   return session;
 }
 
+async function getRequestSiteUrl() {
+  const headerStore = await headers();
+  const origin = headerStore.get("origin");
+  if (origin) return origin;
+
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  if (!host) return siteUrl;
+
+  const proto = headerStore.get("x-forwarded-proto") ?? "http";
+  return `${proto}://${host}`;
+}
+
 // =============================================================
 // Auth actions
 // =============================================================
@@ -52,7 +65,8 @@ async function requireLeader(teamId: string) {
 export async function signInWithEmail(formData: FormData) {
   const email = z.string().email().parse(formData.get("email"));
   const next = safeNextPath(formData.get("next"));
-  const callbackUrl = `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`;
+  const requestSiteUrl = await getRequestSiteUrl();
+  const callbackUrl = `${requestSiteUrl}/auth/callback?next=${encodeURIComponent(next)}`;
   const supabase = await createClient();
   await supabase.auth.signInWithOtp({
     email,
@@ -64,10 +78,11 @@ export async function signInWithEmail(formData: FormData) {
 export async function signInWithGoogle(formData: FormData) {
   const next = safeNextPath(formData.get("next"));
   const supabase = await createClient();
+  const requestSiteUrl = await getRequestSiteUrl();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
+      redirectTo: `${requestSiteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
   if (error || !data.url) throw error ?? new Error("Google sign-in failed");
@@ -121,19 +136,13 @@ export async function createInvite(formData: FormData) {
  */
 export async function joinInvite(formData: FormData) {
   const code = text.max(40).parse(formData.get("code")).toUpperCase();
-  const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("team_invites")
-    .select("team_id")
-    .eq("code", code)
-    .is("revoked_at", null)
-    .maybeSingle();
-  if (error || !data) throw error ?? new Error("Invite not found");
+  const { supabase } = await requireUser();
+  const { data: teamId, error } = await supabase.rpc("accept_team_invite", {
+    invite_code: code,
+  });
+  if (error || !teamId) throw error ?? new Error("Invite not found");
 
-  await supabase
-    .from("team_members")
-    .upsert({ team_id: data.team_id, user_id: user.id, role: "leader" });
-  redirect(`/teams/${data.team_id}`);
+  redirect(`/teams/${teamId}`);
 }
 
 // =============================================================

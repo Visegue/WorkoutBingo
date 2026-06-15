@@ -2,7 +2,6 @@
 
 import {
   ActionIcon,
-  Avatar,
   Card,
   ColorSwatch,
   Group,
@@ -51,19 +50,30 @@ export function MemberCard({
             withArrow
           >
             <Popover.Target>
-              <Avatar
-                size="sm"
-                radius="xl"
+              <button
+                type="button"
                 style={{
+                  alignItems: "center",
                   backgroundColor: member.color,
+                  border: "2px solid rgba(255, 255, 255, 0.9)",
+                  borderRadius: "999px",
+                  boxShadow: "0 0 0 1px rgba(20, 33, 18, 0.18)",
+                  color: "white",
                   cursor: "pointer",
+                  display: "inline-flex",
+                  flexShrink: 0,
+                  height: 32,
+                  justifyContent: "center",
+                  padding: 0,
+                  width: 32,
                 }}
                 onClick={() => setColorOpen(true)}
+                aria-label={`Byt färg för ${member.display_name}`}
               >
                 <Text size="xs" fw={700} c="white">
                   {getInitials(member.display_name)}
                 </Text>
-              </Avatar>
+              </button>
             </Popover.Target>
             <Popover.Dropdown>
               <SimpleGrid cols={6} spacing={6}>

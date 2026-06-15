@@ -21,6 +21,11 @@ const statusLabels = {
   active: "aktiv",
 } as const;
 
+const roleLabels = {
+  leader: "ledare",
+  kid: "spelare",
+} as const;
+
 export default async function TeamPage({
   params,
 }: {
@@ -70,12 +75,16 @@ export default async function TeamPage({
             Tillbaka till översikt
           </Text>
           <Title>{team?.name ?? "Lag"}</Title>
-          <Badge color="green">ledare</Badge>
+          {member ? (
+            <Badge color={isLeader ? "green" : "gray"}>
+              {roleLabels[member.role]}
+            </Badge>
+          ) : null}
         </div>
       </Group>
       <div className="card-grid">
         <Card radius="lg" p="lg" withBorder>
-          <Group justify="space-between">
+          <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
             <Title order={2}>Bingobrickor</Title>
             {isLeader ? <CreateBoardButton teamId={teamId} /> : null}
           </Group>
@@ -151,7 +160,7 @@ export default async function TeamPage({
             <Card radius="lg" p="lg" withBorder>
               <Title order={2}>Inbjudningar (ledare)</Title>
               <Text size="sm" c="dimmed" mb="md">
-                Bjud in andra ledare som ska kunna redigera lag och brickor.
+                Bjud in andra ledare som ska kunna redigera det här laget och dess brickor.
               </Text>
               <form action={createInvite}>
                 <input type="hidden" name="teamId" value={teamId} />

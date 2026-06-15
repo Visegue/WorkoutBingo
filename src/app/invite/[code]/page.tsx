@@ -17,19 +17,12 @@ export default async function InvitePage({
   }
 
   const supabase = await createClient();
-  const { data: invite, error } = await supabase
-    .from("team_invites")
-    .select("team_id")
-    .eq("code", code.toUpperCase())
-    .is("revoked_at", null)
-    .maybeSingle();
+  const { data: teamId, error } = await supabase.rpc("accept_team_invite", {
+    invite_code: code.toUpperCase(),
+  });
 
-  if (!error && invite) {
-    // Invite found — make user a leader of the team
-    await supabase
-      .from("team_members")
-      .upsert({ team_id: invite.team_id, user_id: user.id, role: "leader" });
-    redirect(`/teams/${invite.team_id}`);
+  if (!error && teamId) {
+    redirect(`/teams/${teamId}`);
   }
 
   return (
