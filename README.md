@@ -89,6 +89,12 @@ Supabase skills locally with:
 npx skills add supabase/agent-skills
 ```
 
+Install or update the local Vercel opencode plugin with:
+
+```bash
+npx plugins add vercel/vercel-plugin
+```
+
 ## Validation
 
 ```bash

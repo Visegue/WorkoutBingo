@@ -6,12 +6,13 @@ import {
   Group,
   Stack,
   Text,
-  TextInput,
   Title,
 } from "@mantine/core";
-import { createInvite, createMember } from "@/app/actions";
+import { createInvite } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
 import { CreateBoardButton } from "@/components/create-board-button";
+import { CreateMemberButton } from "@/components/create-member-button";
+import { MemberCard } from "@/components/member-card";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv, siteUrl } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,11 @@ import { createClient } from "@/lib/supabase/server";
 const statusLabels = {
   draft: "utkast",
   active: "aktiv",
+} as const;
+
+const roleLabels = {
+  leader: "ledare",
+  kid: "spelare",
 } as const;
 
 export default async function TeamPage({
@@ -55,7 +61,7 @@ export default async function TeamPage({
         .limit(5),
       supabase
         .from("members")
-        .select("id, display_name")
+        .select("id, display_name, color")
         .eq("team_id", teamId)
         .order("display_name"),
     ]);
@@ -70,12 +76,16 @@ export default async function TeamPage({
             Tillbaka till översikt
           </Text>
           <Title>{team?.name ?? "Lag"}</Title>
-          <Badge color="green">ledare</Badge>
+          {member ? (
+            <Badge color={isLeader ? "green" : "gray"}>
+              {roleLabels[member.role]}
+            </Badge>
+          ) : null}
         </div>
       </Group>
       <div className="card-grid">
         <Card radius="lg" p="lg" withBorder>
-          <Group justify="space-between">
+          <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
             <Title order={2}>Bingobrickor</Title>
             {isLeader ? <CreateBoardButton teamId={teamId} /> : null}
           </Group>
@@ -110,48 +120,25 @@ export default async function TeamPage({
         {isLeader ? (
           <>
             <Card radius="lg" p="lg" withBorder>
-              <Title order={2}>Spelare ({members?.length ?? 0})</Title>
+              <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
+                <Title order={2}>Spelare ({members?.length ?? 0})</Title>
+                <CreateMemberButton teamId={teamId} />
+              </Group>
               <Stack mt="md">
                 {members?.length ? (
                   members.map((m) => (
-                    <Text key={m.id}>{m.display_name}</Text>
+                    <MemberCard key={m.id} teamId={teamId} member={m} />
                   ))
                 ) : (
                   <Text c="dimmed">Inga spelare ännu.</Text>
                 )}
               </Stack>
-
-              <form action={createMember}>
-                <input type="hidden" name="teamId" value={teamId} />
-                <Stack mt="md">
-                  <TextInput
-                    name="displayName"
-                    label="Ny spelare"
-                    required
-                    placeholder="Namn"
-                  />
-                  <Button type="submit" color="green" variant="light">
-                    Lägg till spelare
-                  </Button>
-                </Stack>
-              </form>
-
-              <Button
-                component="a"
-                href={`/teams/${teamId}/members`}
-                variant="subtle"
-                color="gray"
-                mt="md"
-                fullWidth
-              >
-                Hantera spelare
-              </Button>
             </Card>
 
             <Card radius="lg" p="lg" withBorder>
               <Title order={2}>Inbjudningar (ledare)</Title>
               <Text size="sm" c="dimmed" mb="md">
-                Bjud in andra ledare som ska kunna redigera lag och brickor.
+                Bjud in andra ledare som ska kunna redigera det här laget och dess brickor.
               </Text>
               <form action={createInvite}>
                 <input type="hidden" name="teamId" value={teamId} />

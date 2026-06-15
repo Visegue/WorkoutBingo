@@ -9,6 +9,7 @@ import {
   TextInput,
   Textarea,
 } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { createBoard } from "@/app/actions";
 
@@ -18,15 +19,18 @@ export function CreateBoardButton({ teamId }: { teamId: string }) {
 
   return (
     <>
-      <ActionIcon
-        variant="light"
-        color="green"
-        size="lg"
-        onClick={() => setOpened(true)}
-        aria-label="Skapa ny bingobricka"
-      >
-        +
-      </ActionIcon>
+      <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+        <ActionIcon
+          variant="filled"
+          color="green"
+          size="xl"
+          radius="md"
+          onClick={() => setOpened(true)}
+          aria-label="Skapa ny bingobricka"
+        >
+          <IconPlus size={22} stroke={2.5} />
+        </ActionIcon>
+      </div>
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}

@@ -75,7 +75,7 @@ export default async function BoardPage({
       </main>
     );
 
-  const typedCells = (cells ?? []) as Cell[];
+  const typedCells = (cells ?? []) as unknown as Cell[];
   const totalCells = board.width * board.height;
   const totalCheckedCells = typedCells.filter(
     (cell) => cell.cell_checks.length > 0,

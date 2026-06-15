@@ -69,7 +69,7 @@ export default async function PublicBoardPage({
       .order("display_name"),
   ]);
 
-  const typedCells = (cells ?? []) as Cell[];
+  const typedCells = (cells ?? []) as unknown as Cell[];
   const totalCells = board.width * board.height;
 
   const gridCells = typedCells.map((cell) => {
