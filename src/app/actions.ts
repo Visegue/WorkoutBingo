@@ -188,7 +188,7 @@ export async function renameMember(formData: FormData) {
     if (error.code === "23505") throw new Error("Namnet finns redan i laget");
     throw error;
   }
-  revalidatePath(`/teams/${teamId}/members`);
+  revalidatePath(`/teams/${teamId}`);
 }
 
 export async function deleteMember(formData: FormData) {
@@ -201,7 +201,7 @@ export async function deleteMember(formData: FormData) {
     .eq("id", memberId)
     .eq("team_id", teamId);
   if (error) throw error;
-  revalidatePath(`/teams/${teamId}/members`);
+  revalidatePath(`/teams/${teamId}`);
 }
 
 export async function updateMemberColor(formData: FormData) {
@@ -219,7 +219,7 @@ export async function updateMemberColor(formData: FormData) {
     .eq("id", memberId)
     .eq("team_id", teamId);
   if (error) throw error;
-  revalidatePath(`/teams/${teamId}/members`);
+  revalidatePath(`/teams/${teamId}`);
 }
 
 // =============================================================
