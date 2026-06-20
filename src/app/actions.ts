@@ -131,6 +131,20 @@ export async function createInvite(formData: FormData) {
   revalidatePath(`/teams/${teamId}`);
 }
 
+export async function revokeInvite(formData: FormData) {
+  const teamId = uuid.parse(formData.get("teamId"));
+  const code = text.max(40).parse(formData.get("code")).toUpperCase();
+  const { supabase } = await requireLeader(teamId);
+
+  const { error } = await supabase
+    .from("team_invites")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("team_id", teamId)
+    .eq("code", code);
+  if (error) throw error;
+  revalidatePath(`/teams/${teamId}`);
+}
+
 /**
  * Join a team via invite code. User becomes a leader.
  */

@@ -36,7 +36,6 @@ export function CreateBoardButton({ teamId }: { teamId: string }) {
         onClose={() => setOpened(false)}
         title="Ny bingobricka"
         centered
-        withinPortal={false}
       >
         <form ref={formRef} action={createBoard}>
           <input type="hidden" name="teamId" value={teamId} />

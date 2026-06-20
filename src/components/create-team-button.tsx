@@ -28,7 +28,6 @@ export function CreateTeamButton() {
         onClose={() => setOpened(false)}
         title="Nytt lag"
         centered
-        withinPortal={false}
       >
         <form ref={formRef} action={createTeam}>
           <Stack>
