@@ -94,8 +94,9 @@ export default async function EditBoardPage({
         </Group>
         {!isDraft ? (
           <Alert color="yellow" title="Aktiv bingobricka">
-            Den här bingobrickan har framsteg. Om du genererar om den tas alla
-            kryss bort och en ny slumpad layout skapas.
+            Du kan ändra titel, beskrivning och publik URL utan att påverka
+            uppgifterna. Om du genererar om brickan tas alla kryss bort och en ny
+            slumpad layout skapas.
           </Alert>
         ) : null}
         <div className="card-grid">
@@ -109,7 +110,6 @@ export default async function EditBoardPage({
                   name="title"
                   label="Titel"
                   defaultValue={board.title}
-                  disabled={!isDraft}
                   required
                 />
                 <Group grow>
@@ -138,10 +138,9 @@ export default async function EditBoardPage({
                   name="description"
                   label="Beskrivning"
                   defaultValue={board.description ?? ""}
-                  disabled={!isDraft}
                 />
-                <Button type="submit" color="green" disabled={!isDraft}>
-                  Spara utkast
+                <Button type="submit" color="green">
+                  Spara ändringar
                 </Button>
               </Stack>
             </form>

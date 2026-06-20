@@ -314,32 +314,52 @@ export async function updateDraftBoard(formData: FormData) {
   const boardId = uuid.parse(formData.get("boardId"));
   const teamId = uuid.parse(formData.get("teamId"));
   const title = text.max(100).parse(formData.get("title"));
-  const width = z.coerce
-    .number()
-    .int()
-    .min(2)
-    .max(10)
-    .parse(formData.get("width"));
-  const height = z.coerce
-    .number()
-    .int()
-    .min(2)
-    .max(10)
-    .parse(formData.get("height"));
   const description = z
     .string()
     .trim()
     .max(2000)
     .parse(formData.get("description") ?? "");
   const { supabase } = await requireLeader(teamId);
-  const { error } = await supabase
+
+  const { data: board, error: boardError } = await supabase
     .from("boards")
-    .update({ title, width, height, description })
+    .select("status")
     .eq("id", boardId)
     .eq("team_id", teamId)
-    .eq("status", "draft");
+    .single();
+  if (boardError) throw boardError;
+
+  const updates: {
+    title: string;
+    description: string;
+    width?: number;
+    height?: number;
+  } = { title, description };
+
+  if (board.status === "draft") {
+    updates.width = z.coerce
+      .number()
+      .int()
+      .min(2)
+      .max(10)
+      .parse(formData.get("width"));
+    updates.height = z.coerce
+      .number()
+      .int()
+      .min(2)
+      .max(10)
+      .parse(formData.get("height"));
+  }
+
+  const { error } = await supabase
+    .from("boards")
+    .update(updates)
+    .eq("id", boardId)
+    .eq("team_id", teamId);
   if (error) throw error;
   revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
+  revalidatePath(`/teams/${teamId}/boards/${boardId}`);
+  revalidatePath(`/teams/${teamId}`);
 }
 
 export async function updateBoardSlug(formData: FormData) {
