@@ -28,7 +28,6 @@ export function CreateMemberButton({ teamId }: { teamId: string }) {
         onClose={() => setOpened(false)}
         title="Ny spelare"
         centered
-        withinPortal={false}
       >
         <form ref={formRef} action={createMember}>
           <input type="hidden" name="teamId" value={teamId} />

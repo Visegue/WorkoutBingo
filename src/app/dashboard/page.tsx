@@ -63,7 +63,7 @@ export default async function Dashboard() {
                     color="green"
                     justify="space-between"
                   >
-                    {team.name} ({membership.role === "leader" ? "ledare" : "spelare"})
+                    {team.name}
                   </Button>
                 ) : null;
               })
@@ -73,12 +73,12 @@ export default async function Dashboard() {
           </Stack>
         </Card>
         <Card radius="lg" p="lg" withBorder>
-          <Title order={2}>Gå med som ledare</Title>
+          <Title order={2}>Gå med via ledarinbjudan</Title>
           <form action={joinInvite}>
             <Stack mt="md">
               <TextInput
                 name="code"
-                label="Ledarkod"
+                label="Ledarinbjudan"
                 required
                 placeholder="ABC123"
               />

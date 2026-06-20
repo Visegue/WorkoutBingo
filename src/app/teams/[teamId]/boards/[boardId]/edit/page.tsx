@@ -1,5 +1,6 @@
 import {
   Alert,
+  ActionIcon,
   Button,
   Card,
   Code,
@@ -17,7 +18,6 @@ import {
   Title,
 } from "@mantine/core";
 import {
-  addTask,
   autoFitTaskCounts,
   autofillTasks,
   deleteTask,
@@ -26,10 +26,14 @@ import {
   updateDraftBoard,
 } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
+import { AddTaskButton } from "@/components/add-task-button";
 import { DeleteBoardButton } from "@/components/delete-board-button";
+import { ImportTasksCsvButton } from "@/components/import-tasks-csv-button";
+import { TaskActionsHelpButton } from "@/components/task-actions-help-button";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv, siteUrl } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { IconAdjustments, IconRefresh, IconWand } from "@tabler/icons-react";
 
 export default async function EditBoardPage({
   params,
@@ -94,8 +98,9 @@ export default async function EditBoardPage({
         </Group>
         {!isDraft ? (
           <Alert color="yellow" title="Aktiv bingobricka">
-            Den här bingobrickan har framsteg. Om du genererar om den tas alla
-            kryss bort och en ny slumpad layout skapas.
+            Du kan ändra titel, beskrivning och publik URL utan att påverka
+            uppgifterna. För att ändra själva brickan behöver du nollställa
+            framstegen och låsa upp den som utkast.
           </Alert>
         ) : null}
         <div className="card-grid">
@@ -109,7 +114,6 @@ export default async function EditBoardPage({
                   name="title"
                   label="Titel"
                   defaultValue={board.title}
-                  disabled={!isDraft}
                   required
                 />
                 <Group grow>
@@ -138,10 +142,9 @@ export default async function EditBoardPage({
                   name="description"
                   label="Beskrivning"
                   defaultValue={board.description ?? ""}
-                  disabled={!isDraft}
                 />
-                <Button type="submit" color="green" disabled={!isDraft}>
-                  Spara utkast
+                <Button type="submit" color="green">
+                  Spara ändringar
                 </Button>
               </Stack>
             </form>
@@ -174,39 +177,6 @@ export default async function EditBoardPage({
               </Stack>
             </form>
           </Card>
-          <Card radius="lg" p="lg" withBorder>
-            <Title order={2}>Lägg till uppgift</Title>
-            <form action={addTask}>
-              <input type="hidden" name="teamId" value={teamId} />
-              <input type="hidden" name="boardId" value={boardId} />
-              <Stack mt="md">
-                <TextInput
-                  name="title"
-                  label="Uppgift"
-                  placeholder="20 jongleringar"
-                  disabled={!isDraft}
-                  required
-                />
-                <Textarea
-                  name="description"
-                  label="Beskrivning"
-                  disabled={!isDraft}
-                />
-                <TextInput
-                  name="appearanceCount"
-                  label="Antal gånger på bingobrickan"
-                  type="number"
-                  min={1}
-                  defaultValue={1}
-                  disabled={!isDraft}
-                  required
-                />
-                <Button type="submit" color="green" disabled={!isDraft}>
-                  Lägg till uppgift
-                </Button>
-              </Stack>
-            </form>
-          </Card>
         </div>
         <Card radius="lg" p="lg" withBorder>
           <Group justify="space-between" align="start">
@@ -215,36 +185,46 @@ export default async function EditBoardPage({
               <Text c={totalAppearances === boardCells ? "green" : "red"}>
                 {totalAppearances} uppgiftsplaceringar / {boardCells} rutor
               </Text>
-              {isDraft && totalAppearances !== boardCells ? (
-                <Text c="dimmed" size="sm" mt={4}>
-                  Anpassa automatiskt minskar de vanligaste uppgifterna först om
-                  det är för många, eller fyller på alfabetiskt om det saknas
-                  rutor.
-                </Text>
-              ) : null}
             </div>
-            <Stack gap="xs" align="flex-end">
+            <Group gap="xs" justify="flex-end">
+              <TaskActionsHelpButton isDraft={isDraft} />
+              {isDraft ? (
+                <AddTaskButton teamId={teamId} boardId={boardId} />
+              ) : null}
+              {isDraft ? (
+                <ImportTasksCsvButton teamId={teamId} boardId={boardId} />
+              ) : null}
               {isDraft && totalAppearances < boardCells ? (
                 <form action={autofillTasks}>
                   <input type="hidden" name="teamId" value={teamId} />
                   <input type="hidden" name="boardId" value={boardId} />
-                  <Button type="submit" color="green" variant="light">
-                    Autofyll uppgifter
-                  </Button>
+                  <ActionIcon
+                    type="submit"
+                    color="green"
+                    variant="light"
+                    size="xl"
+                    radius="md"
+                    aria-label="Autofyll uppgifter"
+                  >
+                    <IconWand size={22} />
+                  </ActionIcon>
                 </form>
               ) : null}
               {isDraft ? (
                 <form action={autoFitTaskCounts}>
                   <input type="hidden" name="teamId" value={teamId} />
                   <input type="hidden" name="boardId" value={boardId} />
-                  <Button
+                  <ActionIcon
                     type="submit"
                     color="green"
                     variant="light"
+                    size="xl"
+                    radius="md"
                     disabled={!tasks?.length || totalAppearances === boardCells}
+                    aria-label="Anpassa antal automatiskt"
                   >
-                    Anpassa automatiskt
-                  </Button>
+                    <IconAdjustments size={22} />
+                  </ActionIcon>
                 </form>
               ) : null}
               <form action={generateBoard}>
@@ -253,17 +233,23 @@ export default async function EditBoardPage({
                 {!isDraft ? (
                   <input type="hidden" name="resetConfirmed" value="on" />
                 ) : null}
-                <Button
+                <ActionIcon
                   type="submit"
                   color={isDraft ? "green" : "red"}
+                  variant={isDraft ? "filled" : "light"}
+                  size="xl"
+                  radius="md"
                   disabled={totalAppearances !== boardCells}
+                  aria-label={
+                    isDraft
+                      ? "Generera bingobricka"
+                      : "Nollställ framsteg och lås upp"
+                  }
                 >
-                  {isDraft
-                    ? "Generera bingobricka"
-                    : "Nollställ framsteg och generera om"}
-                </Button>
+                  <IconRefresh size={22} />
+                </ActionIcon>
               </form>
-            </Stack>
+            </Group>
           </Group>
           <Table mt="md">
             <TableThead>

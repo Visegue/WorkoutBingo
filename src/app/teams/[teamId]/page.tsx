@@ -1,14 +1,17 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Card,
   Code,
+  Divider,
   Group,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
-import { createInvite } from "@/app/actions";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { createInvite, revokeInvite } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
 import { CreateBoardButton } from "@/components/create-board-button";
 import { CreateMemberButton } from "@/components/create-member-button";
@@ -38,33 +41,56 @@ export default async function TeamPage({
   if (!user) return null;
   const { teamId } = await params;
   const supabase = await createClient();
-  const [{ data: team }, { data: member }, { data: boards }, { data: invites }, { data: members }] =
-    await Promise.all([
-      supabase.from("teams").select("id, name").eq("id", teamId).single(),
-      supabase
-        .from("team_members")
-        .select("role")
-        .eq("team_id", teamId)
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("boards")
-        .select("id, title, status, slug, width, height, created_at")
-        .eq("team_id", teamId)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("team_invites")
-        .select("code, created_at")
-        .eq("team_id", teamId)
-        .is("revoked_at", null)
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("members")
-        .select("id, display_name, color")
-        .eq("team_id", teamId)
-        .order("display_name"),
-    ]);
+  const [
+    { data: team },
+    { data: member },
+    { data: boards },
+    { data: invites },
+    { data: members },
+    { data: leaders },
+  ] = await Promise.all([
+    supabase.from("teams").select("id, name").eq("id", teamId).single(),
+    supabase
+      .from("team_members")
+      .select("role")
+      .eq("team_id", teamId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("boards")
+      .select("id, title, status, slug, width, height, created_at")
+      .eq("team_id", teamId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("team_invites")
+      .select("code, created_at")
+      .eq("team_id", teamId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("members")
+      .select("id, display_name, color")
+      .eq("team_id", teamId)
+      .order("display_name"),
+    supabase
+      .from("team_members")
+      .select("user_id, created_at")
+      .eq("team_id", teamId)
+      .eq("role", "leader")
+      .order("created_at"),
+  ]);
+
+  const leaderIds = leaders?.map((leader) => leader.user_id) ?? [];
+  const { data: leaderProfiles } = leaderIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", leaderIds)
+    : { data: [] };
+  const leaderProfileById = new Map(
+    leaderProfiles?.map((profile) => [profile.id, profile]) ?? [],
+  );
 
   const isLeader = member?.role === "leader";
 
@@ -104,11 +130,6 @@ export default async function TeamPage({
                     {board.title} ({board.width}x{board.height},{" "}
                     {statusLabels[board.status]})
                   </Button>
-                  {board.slug ? (
-                    <Text size="xs" c="dimmed" mt={4}>
-                      Publik länk: {siteUrl}/b/{board.slug}
-                    </Text>
-                  ) : null}
                 </div>
               ))
             ) : (
@@ -136,25 +157,80 @@ export default async function TeamPage({
             </Card>
 
             <Card radius="lg" p="lg" withBorder>
-              <Title order={2}>Inbjudningar (ledare)</Title>
-              <Text size="sm" c="dimmed" mb="md">
-                Bjud in andra ledare som ska kunna redigera det här laget och dess brickor.
-              </Text>
-              <form action={createInvite}>
-                <input type="hidden" name="teamId" value={teamId} />
-                <Button type="submit" color="green">
-                  Skapa inbjudningskod
-                </Button>
-              </form>
-              <Stack mt="md" gap="xs">
-                {invites?.map((invite) => (
-                  <Group key={invite.code} gap="xs">
-                    <Code>{invite.code}</Code>
-                    <Text size="xs" c="dimmed">
-                      {siteUrl}/invite/{invite.code}
-                    </Text>
+              <Stack gap="lg">
+                <div>
+                  <Title order={2}>Ledare</Title>
+                  <Stack mt="md" gap="xs">
+                    {leaders?.length ? (
+                      leaders.map((leader) => {
+                        const profile = leaderProfileById.get(leader.user_id);
+                        return (
+                          <Group key={leader.user_id} gap="xs" wrap="nowrap">
+                            <Badge color="green" variant="light">
+                              ledare
+                            </Badge>
+                            <Text fw={600} size="sm">
+                              {profile?.display_name ?? "Namnlös ledare"}
+                            </Text>
+                          </Group>
+                        );
+                      })
+                    ) : (
+                      <Text c="dimmed">Inga ledare registrerade.</Text>
+                    )}
+                  </Stack>
+                </div>
+
+                <Divider />
+
+                <div>
+                  <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
+                    <Title order={2}>Ledarinbjudningar</Title>
+                    <form action={createInvite}>
+                      <input type="hidden" name="teamId" value={teamId} />
+                      <ActionIcon
+                        type="submit"
+                        variant="filled"
+                        color="green"
+                        size="xl"
+                        radius="md"
+                        aria-label="Skapa ledarinbjudan"
+                      >
+                        <IconPlus size={22} stroke={2.5} />
+                      </ActionIcon>
+                    </form>
                   </Group>
-                ))}
+                  <Text size="sm" c="dimmed" mb="md">
+                    Bjud in andra ledare som ska kunna redigera laget och brickorna.
+                  </Text>
+                  <Stack mt="md" gap="xs">
+                    {invites?.length ? (
+                      invites.map((invite) => (
+                        <Group key={invite.code} gap="xs" wrap="nowrap">
+                          <Code>{invite.code}</Code>
+                          <Text size="xs" c="dimmed" style={{ flex: 1, minWidth: 0 }}>
+                            {siteUrl}/invite/{invite.code}
+                          </Text>
+                          <form action={revokeInvite}>
+                            <input type="hidden" name="teamId" value={teamId} />
+                            <input type="hidden" name="code" value={invite.code} />
+                            <ActionIcon
+                              type="submit"
+                              variant="subtle"
+                              color="red"
+                              size="sm"
+                              aria-label="Ta bort ledarinbjudan"
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </form>
+                        </Group>
+                      ))
+                    ) : (
+                      <Text c="dimmed">Inga aktiva ledarinbjudningar.</Text>
+                    )}
+                  </Stack>
+                </div>
               </Stack>
             </Card>
           </>

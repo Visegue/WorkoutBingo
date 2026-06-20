@@ -18,6 +18,51 @@ import { createClient } from "@/lib/supabase/server";
 const text = z.string().trim().min(1);
 const uuid = z.string().uuid();
 
+function parseCsvLine(line: string) {
+  const values: string[] = [];
+  let value = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"' && inQuotes && nextChar === '"') {
+      value += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      values.push(value.trim());
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+
+  values.push(value.trim());
+  return values;
+}
+
+function looksLikeCsvHeader(row: string[]) {
+  const first = row[0]?.toLowerCase() ?? "";
+  const second = row[1]?.toLowerCase() ?? "";
+  const third = row[2]?.toLowerCase() ?? "";
+  return (
+    first === "uppgift" ||
+    first === "träning" ||
+    first === "traning" ||
+    first === "task" ||
+    first === "title" ||
+    second.includes("beskrivning") ||
+    second.includes("description") ||
+    third.includes("antal") ||
+    third.includes("gånger") ||
+    third.includes("count") ||
+    third.includes("times")
+  );
+}
+
 async function requireUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
@@ -127,6 +172,20 @@ export async function createInvite(formData: FormData) {
     code: randomInviteCode(),
     created_by: user.id,
   });
+  if (error) throw error;
+  revalidatePath(`/teams/${teamId}`);
+}
+
+export async function revokeInvite(formData: FormData) {
+  const teamId = uuid.parse(formData.get("teamId"));
+  const code = text.max(40).parse(formData.get("code")).toUpperCase();
+  const { supabase } = await requireLeader(teamId);
+
+  const { error } = await supabase
+    .from("team_invites")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("team_id", teamId)
+    .eq("code", code);
   if (error) throw error;
   revalidatePath(`/teams/${teamId}`);
 }
@@ -300,32 +359,52 @@ export async function updateDraftBoard(formData: FormData) {
   const boardId = uuid.parse(formData.get("boardId"));
   const teamId = uuid.parse(formData.get("teamId"));
   const title = text.max(100).parse(formData.get("title"));
-  const width = z.coerce
-    .number()
-    .int()
-    .min(2)
-    .max(10)
-    .parse(formData.get("width"));
-  const height = z.coerce
-    .number()
-    .int()
-    .min(2)
-    .max(10)
-    .parse(formData.get("height"));
   const description = z
     .string()
     .trim()
     .max(2000)
     .parse(formData.get("description") ?? "");
   const { supabase } = await requireLeader(teamId);
-  const { error } = await supabase
+
+  const { data: board, error: boardError } = await supabase
     .from("boards")
-    .update({ title, width, height, description })
+    .select("status")
     .eq("id", boardId)
     .eq("team_id", teamId)
-    .eq("status", "draft");
+    .single();
+  if (boardError) throw boardError;
+
+  const updates: {
+    title: string;
+    description: string;
+    width?: number;
+    height?: number;
+  } = { title, description };
+
+  if (board.status === "draft") {
+    updates.width = z.coerce
+      .number()
+      .int()
+      .min(2)
+      .max(10)
+      .parse(formData.get("width"));
+    updates.height = z.coerce
+      .number()
+      .int()
+      .min(2)
+      .max(10)
+      .parse(formData.get("height"));
+  }
+
+  const { error } = await supabase
+    .from("boards")
+    .update(updates)
+    .eq("id", boardId)
+    .eq("team_id", teamId);
   if (error) throw error;
   revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
+  revalidatePath(`/teams/${teamId}/boards/${boardId}`);
+  revalidatePath(`/teams/${teamId}`);
 }
 
 export async function updateBoardSlug(formData: FormData) {
@@ -375,6 +454,70 @@ export async function addTask(formData: FormData) {
       description,
       appearance_count: appearanceCount,
     });
+  if (error) throw error;
+  revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
+}
+
+export async function importTasksCsv(formData: FormData) {
+  const boardId = uuid.parse(formData.get("boardId"));
+  const teamId = uuid.parse(formData.get("teamId"));
+  const file = formData.get("csvFile");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Välj en CSV-fil");
+  }
+
+  const { supabase } = await requireLeader(teamId);
+  const { data: board, error: boardError } = await supabase
+    .from("boards")
+    .select("status")
+    .eq("id", boardId)
+    .eq("team_id", teamId)
+    .single();
+  if (boardError) throw boardError;
+  if (board.status !== "draft") throw new Error("Board must be a draft");
+
+  const csv = await file.text();
+  const rows = csv
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map(parseCsvLine);
+
+  if (!rows.length) throw new Error("CSV-filen är tom");
+  const hasHeader = looksLikeCsvHeader(rows[0]);
+  if (hasHeader) rows.shift();
+  if (!rows.length) throw new Error("CSV-filen saknar uppgifter");
+  if (rows.length > 200) throw new Error("Importera max 200 uppgifter åt gången");
+
+  const tasks = rows.map((row, index) => {
+    const rowNumber = index + (hasHeader ? 2 : 1);
+    if (row.length > 3) {
+      throw new Error(`Rad ${rowNumber} har för många kolumner`);
+    }
+
+    const title = text.max(120).parse(row[0]);
+    const description = z.string().trim().max(1000).parse(row[1] ?? "");
+    if (!row[2] || Number.isNaN(Number(row[2]))) {
+      throw new Error(`Rad ${rowNumber} behöver ett numeriskt antal`);
+    }
+
+    const appearanceCount = z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .parse(row[2]);
+
+    return {
+      board_id: boardId,
+      title,
+      description,
+      appearance_count: appearanceCount,
+    };
+  });
+
+  const { error } = await supabase.from("tasks").insert(tasks);
   if (error) throw error;
   revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
 }
@@ -561,6 +704,25 @@ export async function generateBoard(formData: FormData) {
   if (boardError) throw boardError;
   if (board.status === "active" && !resetConfirmed)
     throw new Error("Reset confirmation required");
+
+  if (board.status === "active") {
+    const { data: existingCells } = await supabase
+      .from("board_cells")
+      .select("id")
+      .eq("board_id", boardId);
+    const existingCellIds = existingCells?.map((cell) => cell.id) ?? [];
+    if (existingCellIds.length > 0) {
+      await supabase.from("cell_checks").delete().in("cell_id", existingCellIds);
+    }
+
+    const { error: updateError } = await supabase
+      .from("boards")
+      .update({ status: "draft", generated_at: null })
+      .eq("id", boardId)
+      .eq("team_id", teamId);
+    if (updateError) throw updateError;
+    redirect(`/teams/${teamId}/boards/${boardId}/edit`);
+  }
 
   const { data: tasks, error: tasksError } = await supabase
     .from("tasks")
