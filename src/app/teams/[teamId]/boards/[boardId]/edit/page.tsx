@@ -161,14 +161,16 @@ export default async function EditBoardPage({
             {board.slug ? (
               <Text size="sm" c="dimmed" mt="xs">
                 Nuvarande:{" "}
-                <Code
+                <Text
                   component="a"
                   href={`/b/${board.slug}`}
                   target="_blank"
                   rel="noreferrer"
+                  c="blue"
+                  td="underline"
                 >
-                  {siteUrl}/b/{board.slug}
-                </Code>
+                  <Code>{siteUrl}/b/{board.slug}</Code>
+                </Text>
               </Text>
             ) : (
               <Text size="sm" c="dimmed" mt="xs">

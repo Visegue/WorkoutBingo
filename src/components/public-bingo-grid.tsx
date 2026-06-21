@@ -2,13 +2,14 @@
 
 import {
   Card,
+  Checkbox,
   Group,
   Select,
   Stack,
   Text,
   Tooltip,
 } from "@mantine/core";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 type CellData = {
@@ -90,6 +91,7 @@ export function PublicBingoGrid({
   const storageKey = `board-${slug}-selected-member`;
   const storedValue = useLocalStorage(storageKey);
   const router = useRouter();
+  const [showAllChecks, setShowAllChecks] = useState(true);
 
   const selectedMemberId = useMemo(() => {
     if (storedValue && members.some((m) => m.id === storedValue)) {
@@ -199,6 +201,14 @@ export function PublicBingoGrid({
           }
         />
       )}
+      {!readOnly && !noMembers ? (
+        <Checkbox
+          label="Visa alla"
+          checked={showAllChecks}
+          onChange={(event) => setShowAllChecks(event.currentTarget.checked)}
+          description="Avmarkera för att bara visa vald spelares kryss."
+        />
+      ) : null}
 
       {/* Bingo grid */}
       <div
@@ -206,7 +216,10 @@ export function PublicBingoGrid({
         style={{ "--bingo-width": boardWidth } as React.CSSProperties}
       >
         {cells.map((cell) => {
-          const isFinished = cell.checks.length > 0;
+          const visibleChecks = showAllChecks
+            ? cell.checks
+            : cell.checks.filter((check) => check.member_id === selectedMemberId);
+          const isFinished = visibleChecks.length > 0;
           const checkedBySelected = selectedMemberId
             ? cell.checks.some((c) => c.member_id === selectedMemberId)
             : false;
@@ -260,7 +273,7 @@ export function PublicBingoGrid({
                 </div>
                 {/* Member badges row - always rendered for consistent height */}
                 <Group gap={4} mt={4} style={{ minHeight: 22 }}>
-                  {cell.checks.map((check) => {
+                  {visibleChecks.map((check) => {
                     const member = memberMap.get(check.member_id);
                     const name = member?.display_name ?? "?";
                     const color = member?.color ?? "#ccc";
