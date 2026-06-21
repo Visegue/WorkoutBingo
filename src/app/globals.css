@@ -36,6 +36,11 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.scroll-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
 .bingo-grid {
   display: grid;
   gap: 10px;

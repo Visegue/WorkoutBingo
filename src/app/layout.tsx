@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import {
-  ColorSchemeScript,
-  MantineProvider,
-  mantineHtmlProps,
-} from "@mantine/core";
+import { MantineProvider, mantineHtmlProps } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "./globals.css";
 
@@ -34,9 +30,6 @@ export default function RootLayout({
       {...mantineHtmlProps}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <ColorSchemeScript />
-      </head>
       <body className="min-h-full flex flex-col">
         <MantineProvider>{children}</MantineProvider>
       </body>
