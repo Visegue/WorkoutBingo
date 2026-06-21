@@ -96,6 +96,7 @@ export type Database = {
           created_by: string;
           created_at: string;
           generated_at: string | null;
+          end_date: string | null;
         };
         Insert: {
           id?: string;
@@ -109,6 +110,7 @@ export type Database = {
           created_by: string;
           created_at?: string;
           generated_at?: string | null;
+          end_date?: string | null;
         };
         Update: {
           title?: string;
@@ -118,6 +120,7 @@ export type Database = {
           height?: number;
           status?: "draft" | "active";
           generated_at?: string | null;
+          end_date?: string | null;
         };
         Relationships: [];
       };

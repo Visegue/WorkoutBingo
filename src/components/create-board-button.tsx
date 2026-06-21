@@ -71,6 +71,12 @@ export function CreateBoardButton({ teamId }: { teamId: string }) {
               label="Beskrivning"
               placeholder="Vad ska spelarna göra i sommar?"
             />
+            <TextInput
+              name="endDate"
+              label="Slutdatum"
+              type="date"
+              description="Valfritt. Efter detta datum stängs brickan för nya kryss."
+            />
             <Button type="submit" color="green">
               Skapa utkast
             </Button>

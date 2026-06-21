@@ -79,11 +79,13 @@ export function PublicBingoGrid({
   boardWidth,
   cells,
   members,
+  readOnly = false,
 }: {
   slug: string;
   boardWidth: number;
   cells: CellData[];
   members: Member[];
+  readOnly?: boolean;
 }) {
   const storageKey = `board-${slug}-selected-member`;
   const storedValue = useLocalStorage(storageKey);
@@ -117,6 +119,7 @@ export function PublicBingoGrid({
 
   const handleCellClick = useCallback(
     async (cellId: string) => {
+      if (readOnly) return;
       if (!selectedMemberId) return;
 
       // Check if this member already checked this cell
@@ -133,7 +136,7 @@ export function PublicBingoGrid({
       });
       router.refresh();
     },
-    [slug, router, selectedMemberId, cells],
+    [slug, router, selectedMemberId, cells, readOnly],
   );
 
   const noMembers = members.length === 0;
@@ -150,8 +153,14 @@ export function PublicBingoGrid({
 
   return (
     <Stack gap="md">
-      {/* Member selector */}
-      {noMembers ? (
+      {readOnly ? (
+        <Card radius="lg" p="md" withBorder bg="gray.0">
+          <Text size="sm">
+            Brickan är avslutad. Resultatet visas nedan och nya kryss kan inte
+            läggas till.
+          </Text>
+        </Card>
+      ) : noMembers ? (
         <Card radius="lg" p="md" withBorder bg="yellow.0">
           <Text size="sm">
             Inga spelare har lagts till ännu. Be lagets ledare lägga till
@@ -201,7 +210,7 @@ export function PublicBingoGrid({
           const checkedBySelected = selectedMemberId
             ? cell.checks.some((c) => c.member_id === selectedMemberId)
             : false;
-          const canClick = !!selectedMemberId;
+          const canClick = !!selectedMemberId && !readOnly;
 
           return (
             <Card
@@ -292,12 +301,12 @@ export function PublicBingoGrid({
       </div>
 
       {/* Helper text */}
-      {selectedMemberId && (
+      {selectedMemberId && !readOnly && (
         <Text size="xs" c="dimmed" ta="center">
           Tryck på en ruta för att kryssa av / ångra
         </Text>
       )}
-      {!selectedMemberId && !noMembers && (
+      {!selectedMemberId && !noMembers && !readOnly && (
         <Text size="xs" c="dimmed" ta="center">
           Välj en spelare ovan för att kryssa av rutor
         </Text>
