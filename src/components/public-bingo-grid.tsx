@@ -257,7 +257,7 @@ export function PublicBingoGrid({
                 </div>
               )}
               <Stack gap={4} justify="space-between" h="100%">
-                <div>
+                <div className="bingo-cell-text">
                   <Text
                     fw={800}
                     size="sm"

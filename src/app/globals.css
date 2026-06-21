@@ -47,13 +47,24 @@ a {
   grid-template-columns: repeat(var(--bingo-width), minmax(120px, 1fr));
 }
 
+.bingo-cell-text {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
 @media (max-width: 720px) {
   .page-shell {
     padding: 14px;
   }
 
   .bingo-grid {
-    grid-template-columns: repeat(var(--bingo-width), minmax(88px, 1fr));
+    grid-template-columns: repeat(var(--bingo-width), minmax(152px, 1fr));
     overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .bingo-grid {
+    grid-template-columns: repeat(var(--bingo-width), minmax(172px, 1fr));
   }
 }
