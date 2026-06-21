@@ -16,6 +16,7 @@ import {
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { createInvite, revokeInvite } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
+import { AdminBreadcrumbs } from "@/components/admin-breadcrumbs";
 import { CreateBoardButton } from "@/components/create-board-button";
 import { CreateMemberButton } from "@/components/create-member-button";
 import { MemberCard } from "@/components/member-card";
@@ -106,9 +107,12 @@ export default async function TeamPage({
     <main className="page-shell">
       <Group justify="space-between" mb="xl">
         <div>
-          <Text component="a" href="/dashboard" c="dimmed" size="sm">
-            Tillbaka till översikt
-          </Text>
+          <AdminBreadcrumbs
+            items={[
+              { label: "Översikt", href: "/dashboard" },
+              { label: team?.name ?? "Lag" },
+            ]}
+          />
           <Title>{team?.name ?? "Lag"}</Title>
           {member ? (
             <Badge color={isLeader ? "green" : "gray"}>

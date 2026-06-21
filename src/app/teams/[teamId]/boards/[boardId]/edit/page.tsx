@@ -27,6 +27,7 @@ import {
 } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
 import { AddTaskButton } from "@/components/add-task-button";
+import { AdminBreadcrumbs } from "@/components/admin-breadcrumbs";
 import { DeleteBoardButton } from "@/components/delete-board-button";
 import { ImportTasksCsvButton } from "@/components/import-tasks-csv-button";
 import { TaskActionsHelpButton } from "@/components/task-actions-help-button";
@@ -46,7 +47,7 @@ export default async function EditBoardPage({
   if (!user) return null;
   const { teamId, boardId } = await params;
   const supabase = await createClient();
-  const [{ data: board }, { data: tasks }, { data: member }] =
+  const [{ data: board }, { data: tasks }, { data: member }, { data: team }] =
     await Promise.all([
       supabase
         .from("boards")
@@ -65,6 +66,7 @@ export default async function EditBoardPage({
         .eq("team_id", teamId)
         .eq("user_id", user.id)
         .maybeSingle(),
+      supabase.from("teams").select("name").eq("id", teamId).single(),
     ]);
 
   if (!board || member?.role !== "leader") {
@@ -85,14 +87,17 @@ export default async function EditBoardPage({
       <Stack gap="lg">
         <Group justify="space-between">
           <div>
-            <Text
-              component="a"
-              href={`/teams/${teamId}/boards/${boardId}`}
-              c="dimmed"
-              size="sm"
-            >
-              Tillbaka till bingobricka
-            </Text>
+            <AdminBreadcrumbs
+              items={[
+                { label: "Översikt", href: "/dashboard" },
+                { label: team?.name ?? "Lag", href: `/teams/${teamId}` },
+                {
+                  label: board.title,
+                  href: `/teams/${teamId}/boards/${boardId}`,
+                },
+                { label: "Redigera" },
+              ]}
+            />
             <Title>Redigera {board.title}</Title>
           </div>
         </Group>

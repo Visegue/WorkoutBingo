@@ -9,6 +9,7 @@ import {
   Title,
 } from "@mantine/core";
 import { SetupRequired } from "@/app/setup-required";
+import { AdminBreadcrumbs } from "@/components/admin-breadcrumbs";
 import { PublicBingoGrid } from "@/components/public-bingo-grid";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv, siteUrl } from "@/lib/env";
@@ -45,8 +46,13 @@ export default async function BoardPage({
   if (!user) return null;
   const { teamId, boardId } = await params;
   const supabase = await createClient();
-  const [{ data: board }, { data: cells }, { data: member }, { data: members }] =
-    await Promise.all([
+  const [
+    { data: board },
+    { data: cells },
+    { data: member },
+    { data: members },
+    { data: team },
+  ] = await Promise.all([
       supabase
         .from("boards")
         .select("*")
@@ -71,6 +77,7 @@ export default async function BoardPage({
         .select("id, display_name, color")
         .eq("team_id", teamId)
         .order("display_name"),
+      supabase.from("teams").select("name").eq("id", teamId).single(),
     ]);
 
   if (!board)
@@ -110,14 +117,13 @@ export default async function BoardPage({
       <Stack gap="lg">
         <Group justify="space-between">
           <div>
-            <Text
-              component="a"
-              href={`/teams/${teamId}`}
-              c="dimmed"
-              size="sm"
-            >
-              Tillbaka till lag
-            </Text>
+            <AdminBreadcrumbs
+              items={[
+                { label: "Översikt", href: "/dashboard" },
+                { label: team?.name ?? "Lag", href: `/teams/${teamId}` },
+                { label: board.title },
+              ]}
+            />
             <Title>{board.title}</Title>
             <Text c="dimmed">{board.description}</Text>
           </div>
