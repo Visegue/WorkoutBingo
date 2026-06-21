@@ -19,6 +19,11 @@ const statusLabels = {
   active: "aktiv",
 } as const;
 
+function isPastEndDate(endDate: string | null) {
+  if (!endDate) return false;
+  return endDate <= new Date().toISOString().slice(0, 10);
+}
+
 type Cell = {
   id: string;
   position: number;
@@ -81,6 +86,8 @@ export default async function BoardPage({
     (cell) => cell.cell_checks.length > 0,
   ).length;
   const isLeader = member?.role === "leader";
+  const isFinished = board.status === "active" && isPastEndDate(board.end_date);
+  const isComplete = totalCells > 0 && totalCheckedCells === totalCells;
 
   const gridCells = typedCells.map((cell) => {
     const task = Array.isArray(cell.tasks) ? cell.tasks[0] : cell.tasks;
@@ -145,16 +152,26 @@ export default async function BoardPage({
 
         <Card radius="lg" p="lg" withBorder>
           <Group justify="space-between" mb="sm">
-            <Badge color={board.status === "active" ? "green" : "gray"}>
-              {statusLabels[board.status]}
+            <Badge color={isFinished ? "gray" : board.status === "active" ? "green" : "gray"}>
+              {isFinished ? "avslutad" : statusLabels[board.status]}
             </Badge>
             <Text fw={700}>
               {totalCheckedCells} / {totalCells} rutor ikryssade
             </Text>
           </Group>
+          {isFinished ? (
+            <Text fw={700} mb="sm">
+              Resultat: {totalCheckedCells} av {totalCells} aktiviteter ikryssade
+            </Text>
+          ) : null}
+          {board.end_date ? (
+            <Text size="sm" c="dimmed" mb="sm">
+              Slutdatum: {board.end_date}
+            </Text>
+          ) : null}
           <Progress
             value={totalCells ? (totalCheckedCells / totalCells) * 100 : 0}
-            color="green"
+            color={isComplete ? "green" : "gray"}
             size="lg"
             radius="xl"
           />
@@ -172,6 +189,7 @@ export default async function BoardPage({
             boardWidth={board.width}
             cells={gridCells}
             members={allMembers}
+            readOnly={isFinished}
           />
         ) : (
           <Card radius="lg" p="lg" withBorder>

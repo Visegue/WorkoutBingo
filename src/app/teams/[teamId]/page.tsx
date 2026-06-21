@@ -30,6 +30,11 @@ const roleLabels = {
   kid: "spelare",
 } as const;
 
+function isPastEndDate(endDate: string | null) {
+  if (!endDate) return false;
+  return endDate <= new Date().toISOString().slice(0, 10);
+}
+
 export default async function TeamPage({
   params,
 }: {
@@ -58,7 +63,7 @@ export default async function TeamPage({
       .maybeSingle(),
     supabase
       .from("boards")
-      .select("id, title, status, slug, width, height, created_at")
+      .select("id, title, status, slug, width, height, end_date, created_at")
       .eq("team_id", teamId)
       .order("created_at", { ascending: false }),
     supabase
@@ -117,21 +122,25 @@ export default async function TeamPage({
           </Group>
           <Stack mt="md">
             {boards?.length ? (
-              boards.map((board) => (
-                <div key={board.id}>
-                  <Button
-                    component="a"
-                    href={`/teams/${teamId}/boards/${board.id}`}
-                    variant="light"
-                    color="green"
-                    justify="space-between"
-                    fullWidth
-                  >
-                    {board.title} ({board.width}x{board.height},{" "}
-                    {statusLabels[board.status]})
-                  </Button>
-                </div>
-              ))
+              boards.map((board) => {
+                const isFinished =
+                  board.status === "active" && isPastEndDate(board.end_date);
+                return (
+                  <div key={board.id}>
+                    <Button
+                      component="a"
+                      href={`/teams/${teamId}/boards/${board.id}`}
+                      variant="light"
+                      color={isFinished ? "gray" : "green"}
+                      justify="space-between"
+                      fullWidth
+                    >
+                      {board.title} ({board.width}x{board.height},{" "}
+                      {isFinished ? "avslutad" : statusLabels[board.status]})
+                    </Button>
+                  </div>
+                );
+              })
             ) : (
               <Text c="dimmed">Inga brickor ännu.</Text>
             )}

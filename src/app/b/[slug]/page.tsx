@@ -22,6 +22,11 @@ type Cell = {
   cell_checks: { member_id: string }[];
 };
 
+function isPastEndDate(endDate: string | null) {
+  if (!endDate) return false;
+  return endDate <= new Date().toISOString().slice(0, 10);
+}
+
 export default async function PublicBoardPage({
   params,
 }: {
@@ -90,6 +95,8 @@ export default async function PublicBoardPage({
 
   const completedCells = gridCells.filter((c) => c.checks.length > 0).length;
   const progressPercent = totalCells > 0 ? Math.round((completedCells / totalCells) * 100) : 0;
+  const isFinished = isPastEndDate(board.end_date);
+  const isComplete = totalCells > 0 && completedCells === totalCells;
 
   return (
     <main className="page-shell">
@@ -100,14 +107,26 @@ export default async function PublicBoardPage({
         </div>
         <Card radius="lg" p="lg" withBorder>
           <Group justify="space-between" mb="sm">
-            <Badge color="green">aktiv</Badge>
+            <Badge color={isFinished ? "gray" : "green"}>
+              {isFinished ? "avslutad" : "aktiv"}
+            </Badge>
             <Text fw={700}>
               {completedCells} / {totalCells} rutor klara
             </Text>
           </Group>
+          {isFinished ? (
+            <Text fw={700} mb="sm">
+              Resultat: {completedCells} av {totalCells} aktiviteter ikryssade
+            </Text>
+          ) : null}
+          {board.end_date ? (
+            <Text size="sm" c="dimmed" mb="sm">
+              Slutdatum: {board.end_date}
+            </Text>
+          ) : null}
           <Progress
             value={progressPercent}
-            color="green"
+            color={isComplete ? "green" : "gray"}
             size="lg"
             radius="xl"
           />
@@ -117,6 +136,7 @@ export default async function PublicBoardPage({
           boardWidth={board.width}
           cells={gridCells}
           members={allMembers}
+          readOnly={isFinished}
         />
       </Stack>
     </main>

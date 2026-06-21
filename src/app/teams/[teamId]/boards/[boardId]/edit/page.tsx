@@ -98,9 +98,9 @@ export default async function EditBoardPage({
         </Group>
         {!isDraft ? (
           <Alert color="yellow" title="Aktiv bingobricka">
-            Du kan ändra titel, beskrivning och publik URL utan att påverka
-            uppgifterna. För att ändra själva brickan behöver du nollställa
-            framstegen och låsa upp den som utkast.
+            Du kan ändra titel, beskrivning, slutdatum och publik URL utan att
+            påverka uppgifterna. För att ändra själva brickan behöver du
+            nollställa framstegen och låsa upp den som utkast.
           </Alert>
         ) : null}
         <div className="card-grid">
@@ -143,6 +143,13 @@ export default async function EditBoardPage({
                   label="Beskrivning"
                   defaultValue={board.description ?? ""}
                 />
+                <TextInput
+                  name="endDate"
+                  label="Slutdatum"
+                  type="date"
+                  defaultValue={board.end_date ?? ""}
+                  description="Valfritt. Efter detta datum stängs brickan för nya kryss."
+                />
                 <Button type="submit" color="green">
                   Spara ändringar
                 </Button>
@@ -153,7 +160,17 @@ export default async function EditBoardPage({
             <Title order={2}>Publik URL</Title>
             {board.slug ? (
               <Text size="sm" c="dimmed" mt="xs">
-                Nuvarande: <Code>{siteUrl}/b/{board.slug}</Code>
+                Nuvarande:{" "}
+                <Text
+                  component="a"
+                  href={`/b/${board.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  c="blue"
+                  td="underline"
+                >
+                  <Code>{siteUrl}/b/{board.slug}</Code>
+                </Text>
               </Text>
             ) : (
               <Text size="sm" c="dimmed" mt="xs">

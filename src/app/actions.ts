@@ -63,6 +63,17 @@ function looksLikeCsvHeader(row: string[]) {
   );
 }
 
+function optionalDate(value: FormDataEntryValue | null) {
+  const date = z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal(""))
+    .parse(value ?? "");
+  return date || null;
+}
+
 async function requireUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
@@ -318,6 +329,7 @@ export async function createBoard(formData: FormData) {
     .trim()
     .max(2000)
     .parse(formData.get("description") ?? "");
+  const endDate = optionalDate(formData.get("endDate"));
   const { supabase, user } = await requireLeader(teamId);
 
   // Generate slug from team name + board title
@@ -346,6 +358,7 @@ export async function createBoard(formData: FormData) {
       width,
       height,
       description,
+      end_date: endDate,
       slug,
       created_by: user.id,
     })
@@ -364,6 +377,7 @@ export async function updateDraftBoard(formData: FormData) {
     .trim()
     .max(2000)
     .parse(formData.get("description") ?? "");
+  const endDate = optionalDate(formData.get("endDate"));
   const { supabase } = await requireLeader(teamId);
 
   const { data: board, error: boardError } = await supabase
@@ -377,9 +391,10 @@ export async function updateDraftBoard(formData: FormData) {
   const updates: {
     title: string;
     description: string;
+    end_date: string | null;
     width?: number;
     height?: number;
-  } = { title, description };
+  } = { title, description, end_date: endDate };
 
   if (board.status === "draft") {
     updates.width = z.coerce

@@ -2,13 +2,14 @@
 
 import {
   Card,
+  Checkbox,
   Group,
   Select,
   Stack,
   Text,
   Tooltip,
 } from "@mantine/core";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 type CellData = {
@@ -79,15 +80,18 @@ export function PublicBingoGrid({
   boardWidth,
   cells,
   members,
+  readOnly = false,
 }: {
   slug: string;
   boardWidth: number;
   cells: CellData[];
   members: Member[];
+  readOnly?: boolean;
 }) {
   const storageKey = `board-${slug}-selected-member`;
   const storedValue = useLocalStorage(storageKey);
   const router = useRouter();
+  const [showAllChecks, setShowAllChecks] = useState(true);
 
   const selectedMemberId = useMemo(() => {
     if (storedValue && members.some((m) => m.id === storedValue)) {
@@ -117,6 +121,7 @@ export function PublicBingoGrid({
 
   const handleCellClick = useCallback(
     async (cellId: string) => {
+      if (readOnly) return;
       if (!selectedMemberId) return;
 
       // Check if this member already checked this cell
@@ -133,7 +138,7 @@ export function PublicBingoGrid({
       });
       router.refresh();
     },
-    [slug, router, selectedMemberId, cells],
+    [slug, router, selectedMemberId, cells, readOnly],
   );
 
   const noMembers = members.length === 0;
@@ -150,8 +155,14 @@ export function PublicBingoGrid({
 
   return (
     <Stack gap="md">
-      {/* Member selector */}
-      {noMembers ? (
+      {readOnly ? (
+        <Card radius="lg" p="md" withBorder bg="gray.0">
+          <Text size="sm">
+            Brickan är avslutad. Resultatet visas nedan och nya kryss kan inte
+            läggas till.
+          </Text>
+        </Card>
+      ) : noMembers ? (
         <Card radius="lg" p="md" withBorder bg="yellow.0">
           <Text size="sm">
             Inga spelare har lagts till ännu. Be lagets ledare lägga till
@@ -190,6 +201,14 @@ export function PublicBingoGrid({
           }
         />
       )}
+      {!readOnly && !noMembers ? (
+        <Checkbox
+          label="Visa alla"
+          checked={showAllChecks}
+          onChange={(event) => setShowAllChecks(event.currentTarget.checked)}
+          description="Avmarkera för att bara visa vald spelares kryss."
+        />
+      ) : null}
 
       {/* Bingo grid */}
       <div
@@ -197,11 +216,14 @@ export function PublicBingoGrid({
         style={{ "--bingo-width": boardWidth } as React.CSSProperties}
       >
         {cells.map((cell) => {
-          const isFinished = cell.checks.length > 0;
+          const visibleChecks = showAllChecks
+            ? cell.checks
+            : cell.checks.filter((check) => check.member_id === selectedMemberId);
+          const isFinished = visibleChecks.length > 0;
           const checkedBySelected = selectedMemberId
             ? cell.checks.some((c) => c.member_id === selectedMemberId)
             : false;
-          const canClick = !!selectedMemberId;
+          const canClick = !!selectedMemberId && !readOnly;
 
           return (
             <Card
@@ -251,7 +273,7 @@ export function PublicBingoGrid({
                 </div>
                 {/* Member badges row - always rendered for consistent height */}
                 <Group gap={4} mt={4} style={{ minHeight: 22 }}>
-                  {cell.checks.map((check) => {
+                  {visibleChecks.map((check) => {
                     const member = memberMap.get(check.member_id);
                     const name = member?.display_name ?? "?";
                     const color = member?.color ?? "#ccc";
@@ -292,12 +314,12 @@ export function PublicBingoGrid({
       </div>
 
       {/* Helper text */}
-      {selectedMemberId && (
+      {selectedMemberId && !readOnly && (
         <Text size="xs" c="dimmed" ta="center">
           Tryck på en ruta för att kryssa av / ångra
         </Text>
       )}
-      {!selectedMemberId && !noMembers && (
+      {!selectedMemberId && !noMembers && !readOnly && (
         <Text size="xs" c="dimmed" ta="center">
           Välj en spelare ovan för att kryssa av rutor
         </Text>
