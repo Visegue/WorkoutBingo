@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import {
   Button,
   Card,
@@ -18,7 +19,7 @@ export default async function Dashboard() {
   if (!hasSupabaseEnv()) return <SetupRequired />;
 
   const user = await ensureProfile();
-  if (!user) return null;
+  if (!user) redirect("/login");
   const supabase = await createClient();
   const { data: memberships } = await supabase
     .from("team_members")

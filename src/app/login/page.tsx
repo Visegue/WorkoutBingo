@@ -13,6 +13,8 @@ import { signInWithEmail, signInWithGoogle } from "@/app/actions";
 import { SetupRequired } from "@/app/setup-required";
 import { hasSupabaseEnv } from "@/lib/env";
 import { safeNextPath } from "@/lib/navigation";
+import { getUser } from "@/lib/domain";
+import { redirect } from "next/navigation";
 
 export default async function Login({
   searchParams,
@@ -20,6 +22,9 @@ export default async function Login({
   searchParams: Promise<{ sent?: string; next?: string }>;
 }) {
   if (!hasSupabaseEnv()) return <SetupRequired />;
+
+  const user = await getUser();
+  if (user) redirect("/dashboard");
 
   const params = await searchParams;
   const next = safeNextPath(params.next);
