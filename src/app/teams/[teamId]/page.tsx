@@ -122,7 +122,6 @@ export default async function TeamPage({
           <TabsTab value="boards">Brickor</TabsTab>
           {isLeader ? <TabsTab value="members">Spelare</TabsTab> : null}
           {isLeader ? <TabsTab value="leaders">Ledare</TabsTab> : null}
-          {isLeader ? <TabsTab value="invites">Inbjudningar</TabsTab> : null}
         </TabsList>
 
         <TabsPanel value="boards">
@@ -181,83 +180,81 @@ export default async function TeamPage({
 
         {isLeader ? (
           <TabsPanel value="leaders">
-            <Card radius="lg" p="lg" withBorder>
-              <Title order={2}>Ledare</Title>
-              <Stack mt="md" gap="xs">
-                {leaders?.length ? (
-                  leaders.map((leader) => {
-                    const profile = leaderProfileById.get(leader.user_id);
-                    return (
-                      <Group key={leader.user_id} gap="xs" wrap="nowrap">
-                        <Badge color="green" variant="light">
-                          ledare
-                        </Badge>
-                        <Text fw={600} size="sm">
-                          {profile?.display_name ?? "Namnlös ledare"}
-                        </Text>
-                      </Group>
-                    );
-                  })
-                ) : (
-                  <Text c="dimmed">Inga ledare registrerade.</Text>
-                )}
-              </Stack>
-            </Card>
-          </TabsPanel>
-        ) : null}
+            <Stack>
+              <Card radius="lg" p="lg" withBorder>
+                <Title order={2}>Ledare</Title>
+                <Stack mt="md" gap="xs">
+                  {leaders?.length ? (
+                    leaders.map((leader) => {
+                      const profile = leaderProfileById.get(leader.user_id);
+                      return (
+                        <Group key={leader.user_id} gap="xs" wrap="nowrap">
+                          <Badge color="green" variant="light">
+                            ledare
+                          </Badge>
+                          <Text fw={600} size="sm">
+                            {profile?.display_name ?? "Namnlös ledare"}
+                          </Text>
+                        </Group>
+                      );
+                    })
+                  ) : (
+                    <Text c="dimmed">Inga ledare registrerade.</Text>
+                  )}
+                </Stack>
+              </Card>
 
-        {isLeader ? (
-          <TabsPanel value="invites">
-            <Card radius="lg" p="lg" withBorder>
-              <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
-                <div>
-                  <Title order={2}>Ledarinbjudningar</Title>
-                  <Text size="sm" c="dimmed" mt={4}>
-                    Bjud in andra ledare som ska kunna redigera laget och brickorna.
-                  </Text>
-                </div>
-                <form action={createInvite}>
-                  <input type="hidden" name="teamId" value={teamId} />
-                  <ActionIcon
-                    type="submit"
-                    variant="filled"
-                    color="green"
-                    size="xl"
-                    radius="md"
-                    aria-label="Skapa ledarinbjudan"
-                  >
-                    <IconPlus size={22} stroke={2.5} />
-                  </ActionIcon>
-                </form>
-              </Group>
-              <Stack mt="md" gap="xs">
-                {invites?.length ? (
-                  invites.map((invite) => (
-                    <Group key={invite.code} gap="xs" wrap="nowrap">
-                      <Code>{invite.code}</Code>
-                      <Text size="xs" c="dimmed" style={{ flex: 1, minWidth: 0 }}>
-                        {siteUrl}/invite/{invite.code}
-                      </Text>
-                      <form action={revokeInvite}>
-                        <input type="hidden" name="teamId" value={teamId} />
-                        <input type="hidden" name="code" value={invite.code} />
-                        <ActionIcon
-                          type="submit"
-                          variant="subtle"
-                          color="red"
-                          size="sm"
-                          aria-label="Ta bort ledarinbjudan"
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </form>
-                    </Group>
-                  ))
-                ) : (
-                  <Text c="dimmed">Inga aktiva ledarinbjudningar.</Text>
-                )}
-              </Stack>
-            </Card>
+              <Card radius="lg" p="lg" withBorder>
+                <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
+                  <div>
+                    <Title order={2}>Ledarinbjudningar</Title>
+                    <Text size="sm" c="dimmed" mt={4}>
+                      Bjud in andra ledare som ska kunna redigera laget och brickorna.
+                    </Text>
+                  </div>
+                  <form action={createInvite}>
+                    <input type="hidden" name="teamId" value={teamId} />
+                    <ActionIcon
+                      type="submit"
+                      variant="filled"
+                      color="green"
+                      size="xl"
+                      radius="md"
+                      aria-label="Skapa ledarinbjudan"
+                    >
+                      <IconPlus size={22} stroke={2.5} />
+                    </ActionIcon>
+                  </form>
+                </Group>
+                <Stack mt="md" gap="xs">
+                  {invites?.length ? (
+                    invites.map((invite) => (
+                      <Group key={invite.code} gap="xs" wrap="nowrap">
+                        <Code>{invite.code}</Code>
+                        <Text size="xs" c="dimmed" style={{ flex: 1, minWidth: 0 }}>
+                          {siteUrl}/invite/{invite.code}
+                        </Text>
+                        <form action={revokeInvite}>
+                          <input type="hidden" name="teamId" value={teamId} />
+                          <input type="hidden" name="code" value={invite.code} />
+                          <ActionIcon
+                            type="submit"
+                            variant="subtle"
+                            color="red"
+                            size="sm"
+                            aria-label="Ta bort ledarinbjudan"
+                          >
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </form>
+                      </Group>
+                    ))
+                  ) : (
+                    <Text c="dimmed">Inga aktiva ledarinbjudningar.</Text>
+                  )}
+                </Stack>
+              </Card>
+            </Stack>
           </TabsPanel>
         ) : null}
       </Tabs>
