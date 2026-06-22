@@ -1,14 +1,18 @@
 "use client";
 
 import {
+  ActionIcon,
+  Button,
   Card,
   Checkbox,
   Group,
+  Modal,
   Select,
   Stack,
   Text,
   Tooltip,
 } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
@@ -92,6 +96,7 @@ export function PublicBingoGrid({
   const storedValue = useLocalStorage(storageKey);
   const router = useRouter();
   const [showAllChecks, setShowAllChecks] = useState(true);
+  const [detailsCellId, setDetailsCellId] = useState<string | null>(null);
 
   const selectedMemberId = useMemo(() => {
     if (storedValue && members.some((m) => m.id === storedValue)) {
@@ -142,6 +147,12 @@ export function PublicBingoGrid({
   );
 
   const noMembers = members.length === 0;
+  const detailsCell = detailsCellId
+    ? cells.find((cell) => cell.id === detailsCellId)
+    : null;
+  const detailsCheckedBySelected = selectedMemberId
+    ? detailsCell?.checks.some((check) => check.member_id === selectedMemberId)
+    : false;
 
   // Build select data with color info for renderOption
   const selectData = useMemo(
@@ -219,6 +230,8 @@ export function PublicBingoGrid({
           const visibleChecks = showAllChecks
             ? cell.checks
             : cell.checks.filter((check) => check.member_id === selectedMemberId);
+          const shownChecks = visibleChecks.slice(0, 3);
+          const hiddenChecks = visibleChecks.length - shownChecks.length;
           const isFinished = visibleChecks.length > 0;
           const checkedBySelected = selectedMemberId
             ? cell.checks.some((c) => c.member_id === selectedMemberId)
@@ -229,9 +242,9 @@ export function PublicBingoGrid({
             <Card
               key={cell.id}
               radius="lg"
-              p="sm"
+              p="md"
               withBorder
-              bg={isFinished ? "gray.1" : "white"}
+              bg={checkedBySelected ? "green.0" : isFinished ? "gray.1" : "white"}
               style={{
                 cursor: canClick ? "pointer" : "default",
                 border: checkedBySelected
@@ -242,38 +255,38 @@ export function PublicBingoGrid({
               }}
               onClick={() => canClick && handleCellClick(cell.id)}
             >
-              {isFinished && (
-                <div
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                radius="xl"
+                aria-label="Visa uppgiftsdetaljer"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDetailsCellId(cell.id);
+                }}
+                style={{ position: "absolute", top: 6, right: 6 }}
+              >
+                <IconInfoCircle size={16} />
+              </ActionIcon>
+              <Stack gap={8} justify="space-between" h="100%">
+                <Text
+                  fw={800}
+                  size="sm"
+                  c={isFinished ? "dimmed" : undefined}
+                  pr={18}
                   style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 6,
-                    fontSize: 14,
-                    lineHeight: 1,
-                    color: "var(--mantine-color-green-6)",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
                   }}
                 >
-                  ✓
-                </div>
-              )}
-              <Stack gap={4} justify="space-between" h="100%">
-                <div className="bingo-cell-text">
-                  <Text
-                    fw={800}
-                    size="sm"
-                    c={isFinished ? "dimmed" : undefined}
-                  >
-                    {cell.task?.title}
-                  </Text>
-                  {cell.task?.description ? (
-                    <Text size="xs" c="dimmed">
-                      {cell.task.description}
-                    </Text>
-                  ) : null}
-                </div>
+                  {cell.task?.title}
+                </Text>
                 {/* Member badges row - always rendered for consistent height */}
                 <Group gap={4} mt={4} style={{ minHeight: 22 }}>
-                  {visibleChecks.map((check) => {
+                  {shownChecks.map((check) => {
                     const member = memberMap.get(check.member_id);
                     const name = member?.display_name ?? "?";
                     const color = member?.color ?? "#ccc";
@@ -306,6 +319,34 @@ export function PublicBingoGrid({
                       </Tooltip>
                     );
                   })}
+                  {hiddenChecks > 0 ? (
+                    <Tooltip label={`${hiddenChecks} fler kryss`}>
+                      <div
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          backgroundColor: "var(--mantine-color-gray-5)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: "white",
+                            lineHeight: 1,
+                            userSelect: "none",
+                          }}
+                        >
+                          +{hiddenChecks}
+                        </span>
+                      </div>
+                    </Tooltip>
+                  ) : null}
                 </Group>
               </Stack>
             </Card>
@@ -324,6 +365,63 @@ export function PublicBingoGrid({
           Välj en spelare ovan för att kryssa av rutor
         </Text>
       )}
+      <Modal
+        opened={!!detailsCell}
+        onClose={() => setDetailsCellId(null)}
+        title={detailsCell?.task?.title ?? "Uppgift"}
+        centered
+      >
+        <Stack>
+          {detailsCell?.task?.description ? (
+            <Text c="dimmed">{detailsCell.task.description}</Text>
+          ) : (
+            <Text c="dimmed">Ingen beskrivning.</Text>
+          )}
+          <div>
+            <Text fw={700} mb="xs">
+              Ikryssad av ({detailsCell?.checks.length ?? 0})
+            </Text>
+            <Stack gap="xs">
+              {detailsCell?.checks.length ? (
+                detailsCell.checks.map((check) => {
+                  const member = memberMap.get(check.member_id);
+                  return (
+                    <Group key={check.member_id} gap="xs">
+                      <div
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: "50%",
+                          backgroundColor: member?.color ?? "#ccc",
+                        }}
+                      />
+                      <Text size="sm">
+                        {member?.display_name ?? "Okänd spelare"}
+                      </Text>
+                    </Group>
+                  );
+                })
+              ) : (
+                <Text size="sm" c="dimmed">
+                  Ingen ännu.
+                </Text>
+              )}
+            </Stack>
+          </div>
+          {!readOnly && selectedMemberId && detailsCell ? (
+            <Button
+              color={detailsCheckedBySelected ? "red" : "green"}
+              variant={detailsCheckedBySelected ? "light" : "filled"}
+              onClick={() => {
+                void handleCellClick(detailsCell.id);
+                setDetailsCellId(null);
+              }}
+            >
+              {detailsCheckedBySelected ? "Ångra mitt kryss" : "Kryssa av"}
+            </Button>
+          ) : null}
+        </Stack>
+      </Modal>
     </Stack>
   );
 }
