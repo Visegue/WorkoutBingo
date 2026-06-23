@@ -227,10 +227,7 @@ export function PublicBingoGrid({
             : cell.checks.filter((check) => check.member_id === selectedMemberId);
           const shownChecks = visibleChecks.slice(0, 3);
           const hiddenChecks = visibleChecks.length - shownChecks.length;
-          const isFinished = visibleChecks.length > 0;
-          const checkedBySelected = selectedMemberId
-            ? cell.checks.some((c) => c.member_id === selectedMemberId)
-            : false;
+          const isFinished = cell.checks.length > 0;
           const canToggle = !!selectedMemberId && !readOnly;
 
           return (
@@ -239,10 +236,10 @@ export function PublicBingoGrid({
               radius="lg"
               p={0}
               withBorder
-              bg={checkedBySelected ? "green.0" : isFinished ? "gray.1" : "white"}
+              bg={isFinished ? "green.0" : "white"}
               style={{
                 cursor: canToggle || !readOnly ? "pointer" : "default",
-                border: checkedBySelected
+                border: isFinished
                   ? "2px solid var(--mantine-color-green-5)"
                   : undefined,
                 transition: "background 0.15s",
@@ -259,24 +256,47 @@ export function PublicBingoGrid({
                 setDetailsCellId(cell.id);
               }}
             >
-              <Stack gap={6} p="md" style={{ minHeight: 122 }}>
-                <Text
-                  fw={800}
-                  size="sm"
-                  c={isFinished ? "dimmed" : undefined}
-                  style={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {cell.task?.title}
-                </Text>
-                {cell.task?.quantity ? (
-                  <Text size="xs" c="dimmed" fw={600}>
-                    {cell.task.quantity}
+              <Stack gap={6} p="md" style={{ minHeight: 122, flex: 1 }}>
+                <div>
+                  <Text
+                    fw={800}
+                    size="sm"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {cell.task?.title}
                   </Text>
+                  {cell.task?.quantity ? (
+                    <Text size="xs" c="dimmed" fw={600} mt={4}>
+                      {cell.task.quantity}
+                    </Text>
+                  ) : null}
+                </div>
+                {isFinished ? (
+                  <div
+                    aria-label="Avklarad"
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "50%",
+                      backgroundColor: "var(--mantine-color-green-6)",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      marginInline: "auto",
+                      marginTop: "auto",
+                    }}
+                  >
+                    ✓
+                  </div>
                 ) : null}
               </Stack>
               <div
