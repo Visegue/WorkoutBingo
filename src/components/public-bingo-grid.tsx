@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ActionIcon,
   Button,
   Card,
   Checkbox,
@@ -236,7 +235,7 @@ export function PublicBingoGrid({
           const checkedBySelected = selectedMemberId
             ? cell.checks.some((c) => c.member_id === selectedMemberId)
             : false;
-          const canClick = !!selectedMemberId && !readOnly;
+          const canToggle = !!selectedMemberId && !readOnly;
 
           return (
             <Card
@@ -246,35 +245,27 @@ export function PublicBingoGrid({
               withBorder
               bg={checkedBySelected ? "green.0" : isFinished ? "gray.1" : "white"}
               style={{
-                cursor: canClick ? "pointer" : "default",
+                cursor: canToggle || !readOnly ? "pointer" : "default",
                 border: checkedBySelected
                   ? "2px solid var(--mantine-color-green-5)"
                   : undefined,
                 transition: "background 0.15s",
                 position: "relative",
               }}
-              onClick={() => canClick && handleCellClick(cell.id)}
+              onClick={() => {
+                if (canToggle) {
+                  void handleCellClick(cell.id);
+                  return;
+                }
+
+                setDetailsCellId(cell.id);
+              }}
             >
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="sm"
-                radius="xl"
-                aria-label="Visa uppgiftsdetaljer"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setDetailsCellId(cell.id);
-                }}
-                style={{ position: "absolute", top: 6, right: 6 }}
-              >
-                <IconInfoCircle size={16} />
-              </ActionIcon>
               <Stack gap={8} justify="space-between" h="100%">
                 <Text
                   fw={800}
                   size="sm"
                   c={isFinished ? "dimmed" : undefined}
-                  pr={18}
                   style={{
                     display: "-webkit-box",
                     WebkitLineClamp: 3,
@@ -353,6 +344,21 @@ export function PublicBingoGrid({
                     </Tooltip>
                   ) : null}
                 </Group>
+                {canToggle ? (
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    color="gray"
+                    leftSection={<IconInfoCircle size={14} />}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDetailsCellId(cell.id);
+                    }}
+                    style={{ alignSelf: "flex-start", paddingInline: 0 }}
+                  >
+                    Info
+                  </Button>
+                ) : null}
               </Stack>
             </Card>
           );
