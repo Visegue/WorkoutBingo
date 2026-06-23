@@ -241,7 +241,7 @@ export function PublicBingoGrid({
             <Card
               key={cell.id}
               radius="lg"
-              p="md"
+              p={0}
               withBorder
               bg={checkedBySelected ? "green.0" : isFinished ? "gray.1" : "white"}
               style={{
@@ -251,6 +251,8 @@ export function PublicBingoGrid({
                   : undefined,
                 transition: "background 0.15s",
                 position: "relative",
+                display: "flex",
+                flexDirection: "column",
               }}
               onClick={() => {
                 if (canToggle) {
@@ -261,7 +263,7 @@ export function PublicBingoGrid({
                 setDetailsCellId(cell.id);
               }}
             >
-              <Stack gap={8} justify="space-between" h="100%">
+              <Stack gap={6} p="md" style={{ minHeight: 122 }}>
                 <Text
                   fw={800}
                   size="sm"
@@ -276,24 +278,61 @@ export function PublicBingoGrid({
                   {cell.task?.title}
                 </Text>
                 {cell.task?.quantity ? (
-                  <Text size="xs" c="dimmed" fw={600} mt={-4}>
+                  <Text size="xs" c="dimmed" fw={600}>
                     {cell.task.quantity}
                   </Text>
                 ) : null}
-                {/* Member badges row - always rendered for consistent height */}
-                <Group gap={4} mt={4} style={{ minHeight: 22 }}>
-                  {shownChecks.map((check) => {
-                    const member = memberMap.get(check.member_id);
-                    const name = member?.display_name ?? "?";
-                    const color = member?.color ?? "#ccc";
-                    return (
-                      <Tooltip key={check.member_id} label={name}>
+              </Stack>
+              <div
+                style={{
+                  borderTop: "1px solid var(--mantine-color-gray-2)",
+                  minHeight: 44,
+                  padding: "10px 16px",
+                  marginTop: "auto",
+                }}
+              >
+                <Group gap={6} style={{ minHeight: 26 }}>
+                    {shownChecks.map((check) => {
+                      const member = memberMap.get(check.member_id);
+                      const name = member?.display_name ?? "?";
+                      const color = member?.color ?? "#ccc";
+                      return (
+                        <Tooltip key={check.member_id} label={name}>
+                          <div
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                              backgroundColor: color,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: "white",
+                                lineHeight: 1,
+                                userSelect: "none",
+                              }}
+                            >
+                              {getInitials(name)}
+                            </span>
+                          </div>
+                        </Tooltip>
+                      );
+                    })}
+                    {hiddenChecks > 0 ? (
+                      <Tooltip label={`${hiddenChecks} fler kryss`}>
                         <div
                           style={{
-                            width: 22,
-                            height: 22,
+                            width: 24,
+                            height: 24,
                             borderRadius: "50%",
-                            backgroundColor: color,
+                            backgroundColor: "var(--mantine-color-gray-5)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -302,64 +341,41 @@ export function PublicBingoGrid({
                         >
                           <span
                             style={{
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: 700,
                               color: "white",
                               lineHeight: 1,
                               userSelect: "none",
                             }}
                           >
-                            {getInitials(name)}
+                            +{hiddenChecks}
                           </span>
                         </div>
                       </Tooltip>
-                    );
-                  })}
-                  {hiddenChecks > 0 ? (
-                    <Tooltip label={`${hiddenChecks} fler kryss`}>
-                      <div
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          backgroundColor: "var(--mantine-color-gray-5)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: "white",
-                            lineHeight: 1,
-                            userSelect: "none",
-                          }}
-                        >
-                          +{hiddenChecks}
-                        </span>
-                      </div>
-                    </Tooltip>
-                  ) : null}
+                    ) : null}
                 </Group>
-                {canToggle ? (
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    color="gray"
-                    leftSection={<IconInfoCircle size={14} />}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDetailsCellId(cell.id);
-                    }}
-                    style={{ alignSelf: "flex-start", paddingInline: 0 }}
-                  >
-                    Info
-                  </Button>
-                ) : null}
-              </Stack>
+              </div>
+              <div
+                style={{
+                  borderTop: "1px solid var(--mantine-color-gray-2)",
+                  padding: "8px 16px 10px",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  aria-label="Visa uppgiftsdetaljer"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setDetailsCellId(cell.id);
+                  }}
+                >
+                  <IconInfoCircle size={16} />
+                </Button>
+              </div>
             </Card>
           );
         })}
