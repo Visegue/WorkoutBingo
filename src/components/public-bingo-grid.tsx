@@ -92,10 +92,14 @@ export function PublicBingoGrid({
   readOnly?: boolean;
 }) {
   const storageKey = `board-${slug}-selected-member`;
+  const addCheckStorageKey = `board-${slug}-add-check-member`;
   const storedValue = useLocalStorage(storageKey);
   const router = useRouter();
   const [showAllChecks, setShowAllChecks] = useState(true);
   const [detailsCellId, setDetailsCellId] = useState<string | null>(null);
+  const [addCheckCellId, setAddCheckCellId] = useState<string | null>(null);
+  const [addCheckMemberId, setAddCheckMemberId] = useState<string | null>(null);
+  const [lastAddCheckMemberId, setLastAddCheckMemberId] = useState<string | null>(null);
 
   const selectedMemberId = useMemo(() => {
     if (storedValue && members.some((m) => m.id === storedValue)) {
@@ -149,6 +153,19 @@ export function PublicBingoGrid({
   const detailsCell = detailsCellId
     ? cells.find((cell) => cell.id === detailsCellId)
     : null;
+  const addCheckCell = addCheckCellId
+    ? cells.find((cell) => cell.id === addCheckCellId)
+    : null;
+  const addCheckMembers = useMemo(
+    () =>
+      addCheckCell
+        ? members.filter(
+            (member) =>
+              !addCheckCell.checks.some((check) => check.member_id === member.id),
+          )
+        : [],
+    [addCheckCell, members],
+  );
   // Build select data with color info for renderOption
   const selectData = useMemo(
     () =>
@@ -158,6 +175,50 @@ export function PublicBingoGrid({
       })),
     [members],
   );
+  const addCheckSelectData = useMemo(
+    () =>
+      addCheckMembers.map((m) => ({
+        value: m.id,
+        label: m.display_name,
+      })),
+    [addCheckMembers],
+  );
+
+  const openAddCheckModal = useCallback(
+    (cell: CellData) => {
+      const savedMemberId = lastAddCheckMemberId ?? localStorage.getItem(addCheckStorageKey);
+      const canUseSavedMember = savedMemberId
+        ? members.some((member) => member.id === savedMemberId) &&
+          !cell.checks.some((check) => check.member_id === savedMemberId)
+        : false;
+
+      setAddCheckCellId(cell.id);
+      setAddCheckMemberId(canUseSavedMember ? savedMemberId : null);
+    },
+    [addCheckStorageKey, lastAddCheckMemberId, members],
+  );
+
+  const handleAddCheck = useCallback(async () => {
+    if (!addCheckCellId || !addCheckMemberId) return;
+
+    localStorage.setItem(addCheckStorageKey, addCheckMemberId);
+    setLastAddCheckMemberId(addCheckMemberId);
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: addCheckStorageKey,
+        newValue: addCheckMemberId,
+      }),
+    );
+
+    await fetch(`/api/boards/${slug}/check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cellId: addCheckCellId, memberId: addCheckMemberId }),
+    });
+    setAddCheckCellId(null);
+    setAddCheckMemberId(null);
+    router.refresh();
+  }, [addCheckCellId, addCheckMemberId, addCheckStorageKey, router, slug]);
 
   return (
     <Stack gap="md">
@@ -369,8 +430,38 @@ export function PublicBingoGrid({
                         </div>
                       </Tooltip>
                     ) : null}
-                </Group>
-              </div>
+                    {!readOnly && members.length ? (
+                      <Tooltip label="Lägg till spelare">
+                        <button
+                          type="button"
+                          aria-label="Lägg till spelare som kryssat av"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openAddCheckModal(cell);
+                          }}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            border: "2px dashed var(--mantine-color-green-6)",
+                            background: "white",
+                            color: "var(--mantine-color-green-7)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            fontSize: 18,
+                            fontWeight: 800,
+                            lineHeight: 1,
+                            cursor: "pointer",
+                          }}
+                        >
+                          +
+                        </button>
+                      </Tooltip>
+                    ) : null}
+                  </Group>
+                </div>
               <div
                 style={{
                   borderTop: "1px solid var(--mantine-color-gray-2)",
@@ -380,7 +471,7 @@ export function PublicBingoGrid({
                 }}
               >
                 <Button
-                  size="compact-xs"
+                  size="sm"
                   variant="subtle"
                   color="gray"
                   aria-label="Visa uppgiftsdetaljer"
@@ -389,7 +480,7 @@ export function PublicBingoGrid({
                     setDetailsCellId(cell.id);
                   }}
                 >
-                  <IconInfoCircle size={16} />
+                  <IconInfoCircle size={22} stroke={2.4} />
                 </Button>
               </div>
             </Card>
@@ -428,6 +519,74 @@ export function PublicBingoGrid({
           <Button color="gray" variant="light" onClick={() => setDetailsCellId(null)}>
             Stäng
           </Button>
+        </Stack>
+      </Modal>
+      <Modal
+        opened={!!addCheckCell}
+        onClose={() => {
+          setAddCheckCellId(null);
+          setAddCheckMemberId(null);
+        }}
+        title={<Text fw={800}>Lägg till kryss</Text>}
+        centered
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Välj spelaren som har klarat aktiviteten.
+          </Text>
+          {addCheckMembers.length ? (
+            <Select
+              label="Spelare"
+              data={addCheckSelectData}
+              value={addCheckMemberId}
+              onChange={(value) => {
+                setAddCheckMemberId(value);
+                if (!value) return;
+                localStorage.setItem(addCheckStorageKey, value);
+                setLastAddCheckMemberId(value);
+                window.dispatchEvent(
+                  new StorageEvent("storage", {
+                    key: addCheckStorageKey,
+                    newValue: value,
+                  }),
+                );
+              }}
+              placeholder="Välj spelare..."
+              searchable
+              renderOption={({ option }) => {
+                const member = memberMap.get(option.value);
+                return (
+                  <MemberSelectOption
+                    label={option.label}
+                    color={member?.color ?? "#ccc"}
+                  />
+                );
+              }}
+            />
+          ) : (
+            <Text size="sm" c="dimmed">
+              Alla spelare är redan ikryssade på den här aktiviteten.
+            </Text>
+          )}
+          <Group justify="flex-end">
+            <Button
+              variant="light"
+              color="gray"
+              onClick={() => {
+                setAddCheckCellId(null);
+                setAddCheckMemberId(null);
+              }}
+            >
+              Avbryt
+            </Button>
+            <Button
+              color="green"
+              disabled={!addCheckMemberId}
+              onClick={() => void handleAddCheck()}
+            >
+              Lägg till kryss
+            </Button>
+          </Group>
         </Stack>
       </Modal>
     </Stack>
