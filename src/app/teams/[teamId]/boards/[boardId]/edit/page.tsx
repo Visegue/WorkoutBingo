@@ -29,6 +29,7 @@ import { SetupRequired } from "@/app/setup-required";
 import { AddTaskButton } from "@/components/add-task-button";
 import { AdminBreadcrumbs } from "@/components/admin-breadcrumbs";
 import { DeleteBoardButton } from "@/components/delete-board-button";
+import { EditTaskButton } from "@/components/edit-task-button";
 import { ImportTasksCsvButton } from "@/components/import-tasks-csv-button";
 import { TaskActionsHelpButton } from "@/components/task-actions-help-button";
 import { ensureProfile } from "@/lib/domain";
@@ -298,23 +299,26 @@ export default async function EditBoardPage({
                   <TableTd>{task.appearance_count}</TableTd>
                   <TableTd>
                     {isDraft ? (
-                      <form action={deleteTask}>
-                        <input type="hidden" name="teamId" value={teamId} />
-                        <input type="hidden" name="boardId" value={boardId} />
-                        <input
-                          type="hidden"
-                          name="taskId"
-                          value={task.id}
-                        />
-                        <Button
-                          type="submit"
-                          size="xs"
-                          color="red"
-                          variant="subtle"
-                        >
-                          Ta bort
-                        </Button>
-                      </form>
+                      <Group gap="xs" justify="flex-end" wrap="nowrap">
+                        <EditTaskButton teamId={teamId} boardId={boardId} task={task} />
+                        <form action={deleteTask}>
+                          <input type="hidden" name="teamId" value={teamId} />
+                          <input type="hidden" name="boardId" value={boardId} />
+                          <input
+                            type="hidden"
+                            name="taskId"
+                            value={task.id}
+                          />
+                          <Button
+                            type="submit"
+                            size="xs"
+                            color="red"
+                            variant="subtle"
+                          >
+                            Ta bort
+                          </Button>
+                        </form>
+                      </Group>
                     ) : null}
                   </TableTd>
                 </TableTr>

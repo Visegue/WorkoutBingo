@@ -485,6 +485,47 @@ export async function addTask(formData: FormData) {
   revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
 }
 
+export async function updateTask(formData: FormData) {
+  const taskId = uuid.parse(formData.get("taskId"));
+  const boardId = uuid.parse(formData.get("boardId"));
+  const teamId = uuid.parse(formData.get("teamId"));
+  const title = text.max(120).parse(formData.get("title"));
+  const description = z
+    .string()
+    .trim()
+    .max(1000)
+    .parse(formData.get("description") ?? "");
+  const quantity = z
+    .string()
+    .trim()
+    .max(80)
+    .parse(formData.get("quantity") ?? "");
+  const appearanceCount = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .parse(formData.get("appearanceCount"));
+
+  const { supabase } = await requireLeader(teamId);
+  const { data: board, error: boardError } = await supabase
+    .from("boards")
+    .select("status")
+    .eq("id", boardId)
+    .eq("team_id", teamId)
+    .single();
+  if (boardError) throw boardError;
+  if (board.status !== "draft") throw new Error("Board must be a draft");
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ title, description, quantity, appearance_count: appearanceCount })
+    .eq("id", taskId)
+    .eq("board_id", boardId);
+  if (error) throw error;
+  revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
+}
+
 export async function importTasksCsv(formData: FormData) {
   const boardId = uuid.parse(formData.get("boardId"));
   const teamId = uuid.parse(formData.get("teamId"));
