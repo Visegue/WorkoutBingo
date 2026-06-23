@@ -1,10 +1,10 @@
 "use client";
 
-import { ActionIcon, Button, Modal, Paper, Stack, Text } from "@mantine/core";
+import { ActionIcon, Alert, Button, Modal, Paper, Stack, Text } from "@mantine/core";
 import { IconFileImport, IconUpload } from "@tabler/icons-react";
 import { useRef, useState } from "react";
-import type { DragEvent } from "react";
-import { importTasksCsv } from "@/app/actions";
+import type { DragEvent, FormEvent } from "react";
+import { importTasksCsvState } from "@/app/actions";
 
 export function ImportTasksCsvButton({
   teamId,
@@ -17,7 +17,35 @@ export function ImportTasksCsvButton({
 }) {
   const [opened, setOpened] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function resetImport() {
+    setFileName("");
+    setError(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setPending(true);
+
+    const result = await importTasksCsvState(
+      { ok: false, error: null },
+      new FormData(event.currentTarget),
+    );
+
+    setPending(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    setOpened(false);
+    resetImport();
+  }
 
   function setDroppedFile(event: DragEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -28,6 +56,7 @@ export function ImportTasksCsvButton({
     transfer.items.add(file);
     inputRef.current.files = transfer.files;
     setFileName(file.name);
+    setError(null);
   }
 
   return (
@@ -43,14 +72,28 @@ export function ImportTasksCsvButton({
       >
         <IconFileImport size={22} />
       </ActionIcon>
-      <Modal opened={opened} onClose={() => setOpened(false)} title="Importera CSV" centered>
-        <form action={importTasksCsv}>
+      <Modal
+        opened={opened}
+        onClose={() => {
+          setOpened(false);
+          setError(null);
+        }}
+        title="Importera CSV"
+        centered
+      >
+        <form onSubmit={handleSubmit}>
           <input type="hidden" name="teamId" value={teamId} />
           <input type="hidden" name="boardId" value={boardId} />
           <Stack>
+            {error ? (
+              <Alert color="red" title="Importen misslyckades">
+                {error}
+              </Alert>
+            ) : null}
             <Text size="sm" c="dimmed">
-              CSV:n ska ha kolumnerna Uppgift, beskrivning och antal. Beskrivning
-              kan vara tom.
+              CSV:n kan ha kolumnerna Uppgift, beskrivning och antal, eller
+              Uppgift, beskrivning, mängd och antal. Beskrivning och mängd kan
+              vara tomma.
             </Text>
             <input
               ref={inputRef}
@@ -59,7 +102,10 @@ export function ImportTasksCsvButton({
               accept=".csv,text/csv"
               required
               style={{ display: "none" }}
-              onChange={(event) => setFileName(event.currentTarget.files?.[0]?.name ?? "")}
+              onChange={(event) => {
+                setFileName(event.currentTarget.files?.[0]?.name ?? "");
+                setError(null);
+              }}
             />
             <Paper
               component="button"
@@ -82,8 +128,8 @@ export function ImportTasksCsvButton({
                 {fileName ? <Text size="sm">Vald fil: {fileName}</Text> : null}
               </Stack>
             </Paper>
-            <Button type="submit" color="green">
-              Importera uppgifter
+            <Button type="submit" color="green" loading={pending} disabled={!fileName}>
+              {pending ? "Importerar..." : "Importera uppgifter"}
             </Button>
           </Stack>
         </form>

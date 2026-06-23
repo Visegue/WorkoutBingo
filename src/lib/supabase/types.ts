@@ -130,6 +130,7 @@ export type Database = {
           board_id: string;
           title: string;
           description: string | null;
+          quantity: string | null;
           appearance_count: number;
           created_at: string;
         };
@@ -138,12 +139,14 @@ export type Database = {
           board_id: string;
           title: string;
           description?: string | null;
+          quantity?: string | null;
           appearance_count: number;
           created_at?: string;
         };
         Update: {
           title?: string;
           description?: string | null;
+          quantity?: string | null;
           appearance_count?: number;
         };
         Relationships: [];

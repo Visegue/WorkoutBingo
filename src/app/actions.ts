@@ -74,6 +74,12 @@ function optionalDate(value: FormDataEntryValue | null) {
   return date || null;
 }
 
+function getActionErrorMessage(error: unknown) {
+  if (error instanceof z.ZodError) return "Kontrollera att CSV-filen har rätt format.";
+  if (error instanceof Error) return error.message;
+  return "Något gick fel. Försök igen.";
+}
+
 async function requireUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
@@ -454,6 +460,11 @@ export async function addTask(formData: FormData) {
     .trim()
     .max(1000)
     .parse(formData.get("description") ?? "");
+  const quantity = z
+    .string()
+    .trim()
+    .max(80)
+    .parse(formData.get("quantity") ?? "");
   const appearanceCount = z.coerce
     .number()
     .int()
@@ -467,6 +478,7 @@ export async function addTask(formData: FormData) {
       board_id: boardId,
       title,
       description,
+      quantity,
       appearance_count: appearanceCount,
     });
   if (error) throw error;
@@ -507,13 +519,16 @@ export async function importTasksCsv(formData: FormData) {
 
   const tasks = rows.map((row, index) => {
     const rowNumber = index + (hasHeader ? 2 : 1);
-    if (row.length > 3) {
+    if (row.length > 4) {
       throw new Error(`Rad ${rowNumber} har för många kolumner`);
     }
 
+    const hasQuantity = row.length >= 4;
     const title = text.max(120).parse(row[0]);
     const description = z.string().trim().max(1000).parse(row[1] ?? "");
-    if (!row[2] || Number.isNaN(Number(row[2]))) {
+    const quantity = z.string().trim().max(80).parse(hasQuantity ? (row[2] ?? "") : "");
+    const countValue = hasQuantity ? row[3] : row[2];
+    if (!countValue || Number.isNaN(Number(countValue))) {
       throw new Error(`Rad ${rowNumber} behöver ett numeriskt antal`);
     }
 
@@ -522,12 +537,13 @@ export async function importTasksCsv(formData: FormData) {
       .int()
       .min(1)
       .max(100)
-      .parse(row[2]);
+      .parse(countValue);
 
     return {
       board_id: boardId,
       title,
       description,
+      quantity,
       appearance_count: appearanceCount,
     };
   });
@@ -535,6 +551,18 @@ export async function importTasksCsv(formData: FormData) {
   const { error } = await supabase.from("tasks").insert(tasks);
   if (error) throw error;
   revalidatePath(`/teams/${teamId}/boards/${boardId}/edit`);
+}
+
+export async function importTasksCsvState(
+  _previousState: { ok: boolean; error: string | null },
+  formData: FormData,
+) {
+  try {
+    await importTasksCsv(formData);
+    return { ok: true, error: null };
+  } catch (error) {
+    return { ok: false, error: getActionErrorMessage(error) };
+  }
 }
 
 export async function deleteTask(formData: FormData) {

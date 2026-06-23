@@ -39,8 +39,14 @@ export function AddTaskButton({
               <TextInput
                 name="title"
                 label="Uppgift"
-                placeholder="20 jongleringar"
+                placeholder="Armhävningar"
                 required
+              />
+              <TextInput
+                name="quantity"
+                label="Mängd"
+                placeholder="30 st"
+                description="Valfritt, t.ex. 5 km, 20 min eller 3 x 1 minut."
               />
               <Textarea name="description" label="Beskrivning" />
               <TextInput

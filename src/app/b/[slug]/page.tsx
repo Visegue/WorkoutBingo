@@ -16,8 +16,8 @@ type Cell = {
   id: string;
   position: number;
   tasks:
-    | { title: string; description: string | null }
-    | { title: string; description: string | null }[]
+    | { title: string; description: string | null; quantity: string | null }
+    | { title: string; description: string | null; quantity: string | null }[]
     | null;
   cell_checks: { member_id: string }[];
 };
@@ -63,7 +63,7 @@ export default async function PublicBoardPage({
     supabase
       .from("board_cells")
       .select(
-        "id, position, tasks(title, description), cell_checks(member_id)",
+        "id, position, tasks(title, description, quantity), cell_checks(member_id)",
       )
       .eq("board_id", board.id)
       .order("position"),

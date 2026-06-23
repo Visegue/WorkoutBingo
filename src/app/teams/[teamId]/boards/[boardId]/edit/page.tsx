@@ -286,6 +286,11 @@ export default async function EditBoardPage({
                 <TableTr key={task.id}>
                   <TableTd>
                     <Text fw={600}>{task.title}</Text>
+                    {task.quantity ? (
+                      <Text size="sm" c="dimmed" fw={600}>
+                        {task.quantity}
+                      </Text>
+                    ) : null}
                     <Text size="sm" c="dimmed">
                       {task.description}
                     </Text>

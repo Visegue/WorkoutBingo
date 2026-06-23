@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 type CellData = {
   id: string;
   position: number;
-  task: { title: string; description: string | null } | null;
+  task: { title: string; description: string | null; quantity: string | null } | null;
   checks: { member_id: string }[];
 };
 
@@ -284,6 +284,11 @@ export function PublicBingoGrid({
                 >
                   {cell.task?.title}
                 </Text>
+                {cell.task?.quantity ? (
+                  <Text size="xs" c="dimmed" fw={600} mt={-4}>
+                    {cell.task.quantity}
+                  </Text>
+                ) : null}
                 {/* Member badges row - always rendered for consistent height */}
                 <Group gap={4} mt={4} style={{ minHeight: 22 }}>
                   {shownChecks.map((check) => {
@@ -377,6 +382,11 @@ export function PublicBingoGrid({
           ) : (
             <Text c="dimmed">Ingen beskrivning.</Text>
           )}
+          {detailsCell?.task?.quantity ? (
+            <Text size="sm">
+              <b>Mängd:</b> {detailsCell.task.quantity}
+            </Text>
+          ) : null}
           <div>
             <Text fw={700} mb="xs">
               Ikryssad av ({detailsCell?.checks.length ?? 0})
