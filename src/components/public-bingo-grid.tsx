@@ -149,10 +149,6 @@ export function PublicBingoGrid({
   const detailsCell = detailsCellId
     ? cells.find((cell) => cell.id === detailsCellId)
     : null;
-  const detailsCheckedBySelected = selectedMemberId
-    ? detailsCell?.checks.some((check) => check.member_id === selectedMemberId)
-    : false;
-
   // Build select data with color info for renderOption
   const selectData = useMemo(
     () =>
@@ -395,7 +391,7 @@ export function PublicBingoGrid({
       <Modal
         opened={!!detailsCell}
         onClose={() => setDetailsCellId(null)}
-        title={detailsCell?.task?.title ?? "Uppgift"}
+        title={<Text fw={800}>{detailsCell?.task?.title ?? "Uppgift"}</Text>}
         centered
       >
         <Stack>
@@ -409,49 +405,9 @@ export function PublicBingoGrid({
               <b>Mängd:</b> {detailsCell.task.quantity}
             </Text>
           ) : null}
-          <div>
-            <Text fw={700} mb="xs">
-              Ikryssad av ({detailsCell?.checks.length ?? 0})
-            </Text>
-            <Stack gap="xs">
-              {detailsCell?.checks.length ? (
-                detailsCell.checks.map((check) => {
-                  const member = memberMap.get(check.member_id);
-                  return (
-                    <Group key={check.member_id} gap="xs">
-                      <div
-                        style={{
-                          width: 14,
-                          height: 14,
-                          borderRadius: "50%",
-                          backgroundColor: member?.color ?? "#ccc",
-                        }}
-                      />
-                      <Text size="sm">
-                        {member?.display_name ?? "Okänd spelare"}
-                      </Text>
-                    </Group>
-                  );
-                })
-              ) : (
-                <Text size="sm" c="dimmed">
-                  Ingen ännu.
-                </Text>
-              )}
-            </Stack>
-          </div>
-          {!readOnly && selectedMemberId && detailsCell ? (
-            <Button
-              color={detailsCheckedBySelected ? "red" : "green"}
-              variant={detailsCheckedBySelected ? "light" : "filled"}
-              onClick={() => {
-                void handleCellClick(detailsCell.id);
-                setDetailsCellId(null);
-              }}
-            >
-              {detailsCheckedBySelected ? "Ångra mitt kryss" : "Kryssa av"}
-            </Button>
-          ) : null}
+          <Button color="gray" variant="light" onClick={() => setDetailsCellId(null)}>
+            Stäng
+          </Button>
         </Stack>
       </Modal>
     </Stack>
