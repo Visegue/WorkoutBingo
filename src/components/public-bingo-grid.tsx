@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Divider,
   Group,
   Modal,
   Popover,
@@ -12,7 +13,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import { IconFilter, IconInfoCircle } from "@tabler/icons-react";
+import { IconFilter } from "@tabler/icons-react";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -203,6 +204,7 @@ export function PublicBingoGrid({
                     );
                   }}
                 />
+                <Divider />
                 {members.map((member) => (
                   <Checkbox
                     key={member.id}
@@ -400,27 +402,6 @@ export function PublicBingoGrid({
                     ) : null}
                   </Group>
                 </div>
-              <div
-                style={{
-                  borderTop: "1px solid var(--mantine-color-gray-2)",
-                  padding: "8px 16px 10px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                <Button
-                  size="sm"
-                  variant="subtle"
-                  color="gray"
-                  aria-label="Visa uppgiftsdetaljer"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDetailsCellId(cell.id);
-                  }}
-                >
-                  <IconInfoCircle size={22} stroke={2.4} />
-                </Button>
-              </div>
             </Card>
           );
         })}
