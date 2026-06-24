@@ -232,8 +232,6 @@ export function PublicBingoGrid({
           const visibleChecks = cell.checks.filter((check) =>
             !hiddenMemberIds.includes(check.member_id),
           );
-          const shownChecks = visibleChecks.slice(0, 3);
-          const hiddenChecks = visibleChecks.length - shownChecks.length;
           const isFinished = cell.checks.length > 0;
 
           return (
@@ -252,12 +250,13 @@ export function PublicBingoGrid({
                 position: "relative",
                 display: "flex",
                 flexDirection: "column",
+                height: "100%",
               }}
               onClick={() => {
                 setDetailsCellId(cell.id);
               }}
             >
-              <Stack gap={6} p="md" style={{ minHeight: 122, flex: 1 }}>
+              <Stack gap={6} p="md" style={{ height: 122, flexShrink: 0 }}>
                 <div>
                   <Text
                     fw={800}
@@ -305,11 +304,11 @@ export function PublicBingoGrid({
                   borderTop: "1px solid var(--mantine-color-gray-2)",
                   minHeight: 44,
                   padding: "10px 16px",
-                  marginTop: "auto",
+                  flex: 1,
                 }}
               >
-                <Group gap={6} style={{ minHeight: 26 }}>
-                    {shownChecks.map((check) => {
+                <Group gap={6} wrap="wrap" style={{ minHeight: 26 }}>
+                    {visibleChecks.map((check) => {
                       const member = memberMap.get(check.member_id);
                       const name = member?.display_name ?? "?";
                       const color = member?.color ?? "#ccc";
@@ -342,34 +341,6 @@ export function PublicBingoGrid({
                         </Tooltip>
                       );
                     })}
-                    {hiddenChecks > 0 ? (
-                      <Tooltip label={`${hiddenChecks} fler kryss`}>
-                        <div
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: "50%",
-                            backgroundColor: "var(--mantine-color-gray-5)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "white",
-                              lineHeight: 1,
-                              userSelect: "none",
-                            }}
-                          >
-                            +{hiddenChecks}
-                          </span>
-                        </div>
-                      </Tooltip>
-                    ) : null}
                     {!readOnly && members.length ? (
                       <Tooltip label="Hantera kryss">
                         <button
