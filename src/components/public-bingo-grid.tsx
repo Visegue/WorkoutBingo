@@ -291,16 +291,17 @@ export function PublicBingoGrid({
                 setDetailsCellId(cell.id);
               }}
             >
-              <Stack gap={6} p="md" style={{ height: 122, flexShrink: 0 }}>
+              <Stack gap={4} p="sm" style={{ height: 122, flexShrink: 0 }}>
                 <div>
                   <Text
-                    fw={800}
+                    fw={700}
                     size="sm"
                     style={{
                       display: "-webkit-box",
-                      WebkitLineClamp: 3,
+                      WebkitLineClamp: 4,
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
+                      lineHeight: 1.25,
                     }}
                   >
                     {cell.task?.title}
@@ -315,15 +316,15 @@ export function PublicBingoGrid({
                   <div
                     aria-label="Avklarad"
                     style={{
-                      width: 34,
-                      height: 34,
+                      width: 28,
+                      height: 28,
                       borderRadius: "50%",
                       backgroundColor: "var(--mantine-color-green-6)",
                       color: "white",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 22,
+                      fontSize: 19,
                       fontWeight: 800,
                       lineHeight: 1,
                       marginInline: "auto",
