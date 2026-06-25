@@ -320,7 +320,9 @@ export function PublicBingoGrid({
           const visibleChecks = cell.checks.filter((check) =>
             !hiddenMemberIds.includes(check.member_id),
           );
-          const isFinished = cell.checks.length > 0;
+          const isFinished = hiddenMemberIds.length
+            ? visibleChecks.length > 0
+            : cell.checks.length > 0;
 
           return (
             <Card
