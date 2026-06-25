@@ -97,6 +97,9 @@ export default async function PublicBoardPage({
   const progressPercent = totalCells > 0 ? Math.round((completedCells / totalCells) * 100) : 0;
   const isFinished = isPastEndDate(board.end_date);
   const isComplete = totalCells > 0 && completedCells === totalCells;
+  const gridStateKey = gridCells
+    .map((cell) => `${cell.id}:${cell.checks.map((check) => check.member_id).join(",")}`)
+    .join("|");
 
   return (
     <main className="page-shell">
@@ -132,6 +135,7 @@ export default async function PublicBoardPage({
           />
         </Card>
         <PublicBingoGrid
+          key={gridStateKey}
           slug={slug}
           boardWidth={board.width}
           cells={gridCells}

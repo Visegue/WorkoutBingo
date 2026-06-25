@@ -2,6 +2,7 @@
 
 import {
   ActionIcon,
+  Alert,
   Badge,
   Button,
   Card,
@@ -75,6 +76,9 @@ export function PublicBingoGrid({
   const router = useRouter();
   const [hiddenMemberIds, setHiddenMemberIds] = useState<string[]>([]);
   const [filterOpened, setFilterOpened] = useState(false);
+  const [optimisticCells, setOptimisticCells] = useState<CellData[]>(cells);
+  const [pendingChecks, setPendingChecks] = useState<string[]>([]);
+  const [checkError, setCheckError] = useState<string | null>(null);
   const [detailsCellId, setDetailsCellId] = useState<string | null>(null);
   const [addCheckCellId, setAddCheckCellId] = useState<string | null>(null);
   const [checkSearch, setCheckSearch] = useState("");
@@ -92,10 +96,10 @@ export function PublicBingoGrid({
 
   const noMembers = members.length === 0;
   const detailsCell = detailsCellId
-    ? cells.find((cell) => cell.id === detailsCellId)
+    ? optimisticCells.find((cell) => cell.id === detailsCellId)
     : null;
   const addCheckCell = addCheckCellId
-    ? cells.find((cell) => cell.id === addCheckCellId)
+    ? optimisticCells.find((cell) => cell.id === addCheckCellId)
     : null;
   const addCheckMembers = useMemo(
     () =>
@@ -146,34 +150,78 @@ export function PublicBingoGrid({
   const handleAddCheck = useCallback(async (memberId: string) => {
     if (!addCheckCellId) return;
 
+    const pendingKey = `${addCheckCellId}:${memberId}`;
+    const previousCells = optimisticCells;
     localStorage.setItem(latestMemberStorageKey, memberId);
     setLatestMemberId(memberId);
-
-    await fetch(`/api/boards/${slug}/check`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cellId: addCheckCellId, memberId }),
-    });
+    setCheckError(null);
+    setPendingChecks((current) => [...current, pendingKey]);
+    setOptimisticCells((current) =>
+      current.map((cell) =>
+        cell.id === addCheckCellId &&
+        !cell.checks.some((check) => check.member_id === memberId)
+          ? { ...cell, checks: [...cell.checks, { member_id: memberId }] }
+          : cell,
+      ),
+    );
     setAddCheckCellId(null);
-    router.refresh();
-  }, [addCheckCellId, latestMemberStorageKey, router, slug]);
+    setCheckSearch("");
+
+    try {
+      const response = await fetch(`/api/boards/${slug}/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cellId: addCheckCellId, memberId }),
+      });
+      if (!response.ok) throw new Error("Krysset kunde inte sparas.");
+      router.refresh();
+    } catch {
+      setOptimisticCells(previousCells);
+      setCheckError("Krysset kunde inte sparas. Försök igen.");
+    } finally {
+      setPendingChecks((current) => current.filter((key) => key !== pendingKey));
+    }
+  }, [addCheckCellId, latestMemberStorageKey, optimisticCells, router, slug]);
 
   const handleRemoveCheck = useCallback(
     async (memberId: string) => {
       if (!addCheckCellId) return;
 
+      const pendingKey = `${addCheckCellId}:${memberId}`;
+      const previousCells = optimisticCells;
       localStorage.setItem(latestMemberStorageKey, memberId);
       setLatestMemberId(memberId);
-
-      await fetch(`/api/boards/${slug}/check`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cellId: addCheckCellId, memberId }),
-      });
+      setCheckError(null);
+      setPendingChecks((current) => [...current, pendingKey]);
+      setOptimisticCells((current) =>
+        current.map((cell) =>
+          cell.id === addCheckCellId
+            ? {
+                ...cell,
+                checks: cell.checks.filter((check) => check.member_id !== memberId),
+              }
+            : cell,
+        ),
+      );
       setAddCheckCellId(null);
-      router.refresh();
+      setCheckSearch("");
+
+      try {
+        const response = await fetch(`/api/boards/${slug}/check`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cellId: addCheckCellId, memberId }),
+        });
+        if (!response.ok) throw new Error("Krysset kunde inte tas bort.");
+        router.refresh();
+      } catch {
+        setOptimisticCells(previousCells);
+        setCheckError("Krysset kunde inte uppdateras. Försök igen.");
+      } finally {
+        setPendingChecks((current) => current.filter((key) => key !== pendingKey));
+      }
     },
-    [addCheckCellId, latestMemberStorageKey, router, slug],
+    [addCheckCellId, latestMemberStorageKey, optimisticCells, router, slug],
   );
 
   const toggleVisibleMember = useCallback((memberId: string, checked: boolean) => {
@@ -257,13 +305,18 @@ export function PublicBingoGrid({
           </Popover>
         </Group>
       ) : null}
+      {checkError ? (
+        <Alert color="red" variant="light" onClose={() => setCheckError(null)} withCloseButton>
+          {checkError}
+        </Alert>
+      ) : null}
 
       {/* Bingo grid */}
       <div
         className="bingo-grid"
         style={{ "--bingo-width": boardWidth } as React.CSSProperties}
       >
-        {cells.map((cell) => {
+        {optimisticCells.map((cell) => {
           const visibleChecks = cell.checks.filter((check) =>
             !hiddenMemberIds.includes(check.member_id),
           );
@@ -467,6 +520,7 @@ export function PublicBingoGrid({
                       justify="flex-start"
                       fullWidth
                       styles={{ label: { width: "100%" } }}
+                      disabled={pendingChecks.includes(`${addCheckCellId}:${member.id}`)}
                       onClick={() => void handleAddCheck(member.id)}
                     >
                       <Group justify="space-between" w="100%" wrap="nowrap">
@@ -502,6 +556,7 @@ export function PublicBingoGrid({
                       justify="flex-start"
                       fullWidth
                       styles={{ label: { width: "100%" } }}
+                      disabled={pendingChecks.includes(`${addCheckCellId}:${member.id}`)}
                       onClick={() => void handleRemoveCheck(member.id)}
                     >
                       <Group justify="space-between" w="100%" wrap="nowrap">

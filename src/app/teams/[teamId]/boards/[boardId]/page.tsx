@@ -111,6 +111,9 @@ export default async function BoardPage({
     display_name: m.display_name,
     color: m.color,
   }));
+  const gridStateKey = gridCells
+    .map((cell) => `${cell.id}:${cell.checks.map((check) => check.member_id).join(",")}`)
+    .join("|");
 
   return (
     <main className="page-shell">
@@ -191,6 +194,7 @@ export default async function BoardPage({
           </Card>
         ) : board.slug ? (
           <PublicBingoGrid
+            key={gridStateKey}
             slug={board.slug}
             boardWidth={board.width}
             cells={gridCells}
