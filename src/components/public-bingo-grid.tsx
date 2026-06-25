@@ -2,6 +2,7 @@
 
 import {
   ActionIcon,
+  Badge,
   Button,
   Card,
   Checkbox,
@@ -9,11 +10,13 @@ import {
   Group,
   Modal,
   Popover,
+  ScrollArea,
   Stack,
   Text,
+  TextInput,
   Tooltip,
 } from "@mantine/core";
-import { IconFilter } from "@tabler/icons-react";
+import { IconFilter, IconSearch } from "@tabler/icons-react";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -68,11 +71,17 @@ export function PublicBingoGrid({
   members: Member[];
   readOnly?: boolean;
 }) {
+  const latestMemberStorageKey = `board-${slug}-latest-check-member`;
   const router = useRouter();
   const [hiddenMemberIds, setHiddenMemberIds] = useState<string[]>([]);
   const [filterOpened, setFilterOpened] = useState(false);
   const [detailsCellId, setDetailsCellId] = useState<string | null>(null);
   const [addCheckCellId, setAddCheckCellId] = useState<string | null>(null);
+  const [checkSearch, setCheckSearch] = useState("");
+  const [latestMemberId, setLatestMemberId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(latestMemberStorageKey);
+  });
 
   // Map member id -> member data for quick lookup
   const memberMap = useMemo(() => {
@@ -109,13 +118,36 @@ export function PublicBingoGrid({
   );
   const allMembersVisible =
     members.length > 0 && hiddenMemberIds.length === 0;
+  const normalizedCheckSearch = checkSearch.trim().toLowerCase();
+  const visibleAddCheckMembers = useMemo(
+    () =>
+      normalizedCheckSearch
+        ? addCheckMembers.filter((member) =>
+            member.display_name.toLowerCase().includes(normalizedCheckSearch),
+          )
+        : addCheckMembers,
+    [addCheckMembers, normalizedCheckSearch],
+  );
+  const visibleRemoveCheckMembers = useMemo(
+    () =>
+      normalizedCheckSearch
+        ? removeCheckMembers.filter((member) =>
+            member.display_name.toLowerCase().includes(normalizedCheckSearch),
+          )
+        : removeCheckMembers,
+    [normalizedCheckSearch, removeCheckMembers],
+  );
 
   const openAddCheckModal = useCallback((cell: CellData) => {
     setAddCheckCellId(cell.id);
+    setCheckSearch("");
   }, []);
 
   const handleAddCheck = useCallback(async (memberId: string) => {
     if (!addCheckCellId) return;
+
+    localStorage.setItem(latestMemberStorageKey, memberId);
+    setLatestMemberId(memberId);
 
     await fetch(`/api/boards/${slug}/check`, {
       method: "POST",
@@ -124,11 +156,14 @@ export function PublicBingoGrid({
     });
     setAddCheckCellId(null);
     router.refresh();
-  }, [addCheckCellId, router, slug]);
+  }, [addCheckCellId, latestMemberStorageKey, router, slug]);
 
   const handleRemoveCheck = useCallback(
     async (memberId: string) => {
       if (!addCheckCellId) return;
+
+      localStorage.setItem(latestMemberStorageKey, memberId);
+      setLatestMemberId(memberId);
 
       await fetch(`/api/boards/${slug}/check`, {
         method: "DELETE",
@@ -138,7 +173,7 @@ export function PublicBingoGrid({
       setAddCheckCellId(null);
       router.refresh();
     },
-    [addCheckCellId, router, slug],
+    [addCheckCellId, latestMemberStorageKey, router, slug],
   );
 
   const toggleVisibleMember = useCallback((memberId: string, checked: boolean) => {
@@ -404,65 +439,88 @@ export function PublicBingoGrid({
         opened={!!addCheckCell}
         onClose={() => {
           setAddCheckCellId(null);
+          setCheckSearch("");
         }}
-        title={<Text fw={800}>Hantera kryss</Text>}
         centered
       >
         <Stack>
-          <Text size="sm" c="dimmed">
-            Lägg till eller ta bort spelare som har klarat aktiviteten.
-          </Text>
-          {addCheckMembers.length ? (
-            <Stack gap="xs">
-              <Text size="sm" fw={700}>
-                Lägg till kryss
-              </Text>
-              {addCheckMembers.map((member) => (
-                <Button
-                  key={member.id}
-                  variant="light"
-                  color="green"
-                  justify="flex-start"
-                  onClick={() => void handleAddCheck(member.id)}
-                >
-                  <MemberBadge name={member.display_name} color={member.color} />
-                </Button>
-              ))}
+          <TextInput
+            placeholder="Skriv namn..."
+            leftSection={<IconSearch size={16} />}
+            value={checkSearch}
+            onChange={(event) => setCheckSearch(event.currentTarget.value)}
+            autoFocus
+          />
+          <ScrollArea.Autosize mah="60vh" type="auto" offsetScrollbars>
+            <Stack gap="md" pr="xs">
+              {visibleAddCheckMembers.length ? (
+                <Stack gap="xs">
+                  <Text size="sm" fw={700}>
+                    Lägg till kryss
+                  </Text>
+                  {visibleAddCheckMembers.map((member) => (
+                    <Button
+                      key={member.id}
+                      variant="light"
+                      color="green"
+                      justify="flex-start"
+                      fullWidth
+                      styles={{ label: { width: "100%" } }}
+                      onClick={() => void handleAddCheck(member.id)}
+                    >
+                      <Group justify="space-between" w="100%" wrap="nowrap">
+                        <MemberBadge name={member.display_name} color={member.color} />
+                        {latestMemberId === member.id ? (
+                          <Badge color="green" variant="light" size="sm">
+                            Senast vald
+                          </Badge>
+                        ) : null}
+                      </Group>
+                    </Button>
+                  ))}
+                </Stack>
+              ) : normalizedCheckSearch ? (
+                <Text size="sm" c="dimmed">
+                  Inga spelare att lägga till matchar sökningen.
+                </Text>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  Alla spelare är redan ikryssade på den här aktiviteten.
+                </Text>
+              )}
+              {visibleRemoveCheckMembers.length ? (
+                <Stack gap="xs">
+                  <Text size="sm" fw={700}>
+                    Ta bort kryss
+                  </Text>
+                  {visibleRemoveCheckMembers.map((member) => (
+                    <Button
+                      key={member.id}
+                      variant="light"
+                      color="red"
+                      justify="flex-start"
+                      fullWidth
+                      styles={{ label: { width: "100%" } }}
+                      onClick={() => void handleRemoveCheck(member.id)}
+                    >
+                      <Group justify="space-between" w="100%" wrap="nowrap">
+                        <MemberBadge name={member.display_name} color={member.color} />
+                        {latestMemberId === member.id ? (
+                          <Badge color="green" variant="light" size="sm">
+                            Senast vald
+                          </Badge>
+                        ) : null}
+                      </Group>
+                    </Button>
+                  ))}
+                </Stack>
+              ) : normalizedCheckSearch && removeCheckMembers.length ? (
+                <Text size="sm" c="dimmed">
+                  Inga ikryssade spelare matchar sökningen.
+                </Text>
+              ) : null}
             </Stack>
-          ) : (
-            <Text size="sm" c="dimmed">
-              Alla spelare är redan ikryssade på den här aktiviteten.
-            </Text>
-          )}
-          {removeCheckMembers.length ? (
-            <Stack gap="xs">
-              <Text size="sm" fw={700}>
-                Ta bort kryss
-              </Text>
-              {removeCheckMembers.map((member) => (
-                <Button
-                  key={member.id}
-                  variant="light"
-                  color="red"
-                  justify="flex-start"
-                  onClick={() => void handleRemoveCheck(member.id)}
-                >
-                  <MemberBadge name={member.display_name} color={member.color} />
-                </Button>
-              ))}
-            </Stack>
-          ) : null}
-          <Group justify="flex-end">
-            <Button
-              variant="light"
-              color="gray"
-              onClick={() => {
-                setAddCheckCellId(null);
-              }}
-            >
-              Avbryt
-            </Button>
-          </Group>
+          </ScrollArea.Autosize>
         </Stack>
       </Modal>
     </Stack>
