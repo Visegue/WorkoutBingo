@@ -13,13 +13,14 @@ import {
   Modal,
   Popover,
   ScrollArea,
+  SegmentedControl,
   Stack,
   Text,
   TextInput,
   Tooltip,
 } from "@mantine/core";
 import { IconFilter, IconSearch } from "@tabler/icons-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 type CellData = {
@@ -60,6 +61,17 @@ function MemberBadge({ name, color }: { name: string; color: string }) {
   );
 }
 
+function useViewportWidth() {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener("resize", callback);
+      return () => window.removeEventListener("resize", callback);
+    },
+    () => window.innerWidth,
+    () => 1024,
+  );
+}
+
 export function PublicBingoGrid({
   slug,
   boardWidth,
@@ -77,6 +89,7 @@ export function PublicBingoGrid({
   const router = useRouter();
   const [hiddenMemberIds, setHiddenMemberIds] = useState<string[]>([]);
   const [filterOpened, setFilterOpened] = useState(false);
+  const [cardSize, setCardSize] = useState<"small" | "medium" | "large">("small");
   const [optimisticCells, setOptimisticCells] = useState<CellData[]>(cells);
   const [pendingChecks, setPendingChecks] = useState<string[]>([]);
   const [checkError, setCheckError] = useState<string | null>(null);
@@ -87,6 +100,7 @@ export function PublicBingoGrid({
     if (typeof window === "undefined") return null;
     return localStorage.getItem(latestMemberStorageKey);
   });
+  const viewportWidth = useViewportWidth();
 
   // Map member id -> member data for quick lookup
   const memberMap = useMemo(() => {
@@ -96,6 +110,8 @@ export function PublicBingoGrid({
   }, [members]);
 
   const noMembers = members.length === 0;
+  const boardFitsViewport = boardWidth * 120 + (boardWidth - 1) * 10 <= viewportWidth - 28;
+  const showSizeControl = !boardFitsViewport;
   const detailsCell = detailsCellId
     ? optimisticCells.find((cell) => cell.id === detailsCellId)
     : null;
@@ -251,7 +267,22 @@ export function PublicBingoGrid({
         </Card>
       ) : null}
       {!noMembers ? (
-        <Group justify="flex-end">
+        <Group justify="space-between" align="center">
+          {showSizeControl ? (
+            <SegmentedControl
+              className="mobile-board-size-control"
+              size="xs"
+              value={cardSize}
+              onChange={(value) => setCardSize(value as "small" | "medium" | "large")}
+              data={[
+                { label: "Liten", value: "small" },
+                { label: "Mellan", value: "medium" },
+                { label: "Stor", value: "large" },
+              ]}
+            />
+          ) : (
+            <div />
+          )}
           <Popover
             opened={filterOpened}
             onChange={setFilterOpened}
@@ -322,7 +353,7 @@ export function PublicBingoGrid({
 
       {/* Bingo grid */}
       <div
-        className="bingo-grid"
+        className={`bingo-grid ${showSizeControl ? `bingo-grid--flow bingo-grid--${cardSize}` : ""}`}
         style={{ "--bingo-width": boardWidth } as React.CSSProperties}
       >
         {optimisticCells.map((cell) => {
@@ -335,6 +366,7 @@ export function PublicBingoGrid({
 
           return (
             <Card
+              className="bingo-card"
               key={cell.id}
               radius="lg"
               p={0}
@@ -355,14 +387,23 @@ export function PublicBingoGrid({
                 setDetailsCellId(cell.id);
               }}
             >
-              <Stack gap={4} p="sm" style={{ height: 122, flexShrink: 0 }}>
+              <Stack
+                className="bingo-card-header"
+                gap={4}
+                p="sm"
+                style={{
+                  height: "var(--bingo-card-header-height, 122px)",
+                  flexShrink: 0,
+                  paddingRight: "var(--bingo-card-header-right-padding)",
+                }}
+              >
                 <div>
                   <Text
                     fw={700}
                     size="sm"
                     style={{
                       display: "-webkit-box",
-                      WebkitLineClamp: 4,
+                      WebkitLineClamp: "var(--bingo-title-line-clamp, 4)",
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
                       lineHeight: 1.25,
@@ -379,20 +420,18 @@ export function PublicBingoGrid({
                 {isFinished ? (
                   <div
                     aria-label="Avklarad"
+                    className="bingo-card-check"
                     style={{
-                      width: 28,
-                      height: 28,
+                      width: "var(--bingo-check-size, 28px)",
+                      height: "var(--bingo-check-size, 28px)",
                       borderRadius: "50%",
                       backgroundColor: "var(--mantine-color-green-6)",
                       color: "white",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 19,
+                      fontSize: "var(--bingo-check-font-size, 19px)",
                       fontWeight: 800,
                       lineHeight: 1,
-                      marginInline: "auto",
-                      marginTop: "auto",
+                      marginInline: "var(--bingo-check-margin-inline, auto)",
+                      marginTop: "var(--bingo-check-margin-top, auto)",
                     }}
                   >
                     ✓
@@ -400,10 +439,11 @@ export function PublicBingoGrid({
                 ) : null}
               </Stack>
               <div
+                className="bingo-card-members"
                 style={{
                   borderTop: "1px solid var(--mantine-color-gray-2)",
                   minHeight: 44,
-                  padding: "10px 16px",
+                  padding: "var(--bingo-member-padding, 10px 16px)",
                   flex: 1,
                 }}
               >
@@ -416,8 +456,8 @@ export function PublicBingoGrid({
                         <Tooltip key={check.member_id} label={name}>
                           <div
                             style={{
-                              width: 24,
-                              height: 24,
+                              width: "var(--bingo-member-size, 24px)",
+                              height: "var(--bingo-member-size, 24px)",
                               borderRadius: "50%",
                               backgroundColor: color,
                               display: "flex",
@@ -428,7 +468,7 @@ export function PublicBingoGrid({
                           >
                             <span
                               style={{
-                                fontSize: 10,
+                                fontSize: "var(--bingo-member-font-size, 10px)",
                                 fontWeight: 700,
                                 color: "white",
                                 lineHeight: 1,
@@ -461,7 +501,7 @@ export function PublicBingoGrid({
                             alignItems: "center",
                             justifyContent: "center",
                             flexShrink: 0,
-                            fontSize: 18,
+                            fontSize: "var(--bingo-plus-font-size, 18px)",
                             fontWeight: 800,
                             lineHeight: 1,
                             cursor: "pointer",

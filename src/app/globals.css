@@ -47,6 +47,16 @@ a {
   grid-template-columns: repeat(var(--bingo-width), minmax(120px, 1fr));
 }
 
+.mobile-board-size-control {
+  display: none;
+}
+
+.bingo-card-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .bingo-cell-text {
   overflow-wrap: anywhere;
   word-break: normal;
@@ -57,14 +67,101 @@ a {
     padding: 14px;
   }
 
+  .mobile-board-size-control {
+    display: flex;
+  }
+
   .bingo-grid {
     grid-template-columns: repeat(var(--bingo-width), minmax(152px, 1fr));
     overflow-x: auto;
   }
+
+  .bingo-grid--flow {
+    overflow-x: visible;
+  }
+
+  .bingo-grid--small {
+    --bingo-card-header-height: 78px;
+    --bingo-card-header-right-padding: 0;
+    --bingo-title-line-clamp: 2;
+    --bingo-check-size: 22px;
+    --bingo-check-font-size: 15px;
+    --bingo-check-margin-inline: 0;
+    --bingo-check-margin-top: 0;
+    --bingo-member-size: 20px;
+    --bingo-member-font-size: 8px;
+    --bingo-member-padding: 7px 8px;
+    --bingo-plus-font-size: 15px;
+
+    grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+    gap: 8px;
+  }
+
+  .bingo-grid--medium {
+    --bingo-card-header-height: 96px;
+    --bingo-card-header-right-padding: 0;
+    --bingo-title-line-clamp: 3;
+    --bingo-check-size: 24px;
+    --bingo-check-font-size: 16px;
+    --bingo-check-margin-inline: 0;
+    --bingo-check-margin-top: 0;
+    --bingo-member-size: 22px;
+    --bingo-member-font-size: 9px;
+    --bingo-member-padding: 8px 10px;
+    --bingo-plus-font-size: 16px;
+
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+  }
+
+  .bingo-grid--large {
+    --bingo-card-header-height: 122px;
+    --bingo-title-line-clamp: 4;
+
+    grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+    gap: 10px;
+  }
+
+  .bingo-grid--flow .bingo-card {
+    min-width: 0;
+  }
+
+  .bingo-grid--small .bingo-card-check,
+  .bingo-grid--medium .bingo-card-check {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {
-  .bingo-grid {
+  .bingo-grid--small {
+    --bingo-card-header-height: 68px;
+    --bingo-card-header-right-padding: 0;
+    --bingo-title-line-clamp: 2;
+    --bingo-check-size: 18px;
+    --bingo-check-font-size: 13px;
+    --bingo-member-size: 18px;
+    --bingo-member-font-size: 7px;
+    --bingo-member-padding: 6px;
+    --bingo-plus-font-size: 14px;
+
+    grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+    gap: 6px;
+  }
+
+  .bingo-grid--medium {
+    --bingo-card-header-height: 86px;
+    --bingo-title-line-clamp: 2;
+    --bingo-check-size: 22px;
+    --bingo-check-font-size: 15px;
+    --bingo-member-size: 20px;
+    --bingo-member-font-size: 8px;
+    --bingo-member-padding: 7px 8px;
+    --bingo-plus-font-size: 15px;
+
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  }
+
+  .bingo-grid:not(.bingo-grid--flow) {
     grid-template-columns: repeat(var(--bingo-width), minmax(172px, 1fr));
   }
 }
