@@ -8,6 +8,7 @@ import {
   Card,
   Checkbox,
   Divider,
+  Indicator,
   Group,
   Modal,
   Popover,
@@ -260,15 +261,23 @@ export function PublicBingoGrid({
           >
             <Popover.Target>
               <Tooltip label="Filtrera spelare">
-                <ActionIcon
-                  variant="light"
+                <Indicator
+                  disabled={allMembersVisible}
                   color="green"
-                  size="lg"
-                  aria-label="Filtrera spelare"
-                  onClick={() => setFilterOpened((opened) => !opened)}
+                  size={10}
+                  offset={4}
+                  withBorder
                 >
-                  <IconFilter size={20} />
-                </ActionIcon>
+                  <ActionIcon
+                    variant={allMembersVisible ? "light" : "filled"}
+                    color="green"
+                    size="lg"
+                    aria-label="Filtrera spelare"
+                    onClick={() => setFilterOpened((opened) => !opened)}
+                  >
+                    <IconFilter size={20} />
+                  </ActionIcon>
+                </Indicator>
               </Tooltip>
             </Popover.Target>
             <Popover.Dropdown>
