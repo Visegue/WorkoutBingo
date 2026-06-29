@@ -19,7 +19,7 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import { IconFilter, IconSearch } from "@tabler/icons-react";
+import { IconFilter, IconHelpCircle, IconSearch } from "@tabler/icons-react";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
@@ -268,21 +268,33 @@ export function PublicBingoGrid({
       ) : null}
       {!noMembers ? (
         <Group justify="space-between" align="center">
-          {showSizeControl ? (
-            <SegmentedControl
-              className="mobile-board-size-control"
+          <Group gap="xs">
+            {showSizeControl ? (
+              <SegmentedControl
+                className="mobile-board-size-control"
+                size="xs"
+                value={cardSize}
+                onChange={(value) => setCardSize(value as "small" | "medium" | "large")}
+                data={[
+                  { label: "Liten", value: "small" },
+                  { label: "Mellan", value: "medium" },
+                  { label: "Stor", value: "large" },
+                ]}
+              />
+            ) : null}
+            <Button
+              component="a"
+              href="/help"
+              target="_blank"
+              rel="noreferrer"
               size="xs"
-              value={cardSize}
-              onChange={(value) => setCardSize(value as "small" | "medium" | "large")}
-              data={[
-                { label: "Liten", value: "small" },
-                { label: "Mellan", value: "medium" },
-                { label: "Stor", value: "large" },
-              ]}
-            />
-          ) : (
-            <div />
-          )}
+              variant="subtle"
+              color="gray"
+              leftSection={<IconHelpCircle size={16} />}
+            >
+              Hjälp
+            </Button>
+          </Group>
           <Popover
             opened={filterOpened}
             onChange={setFilterOpened}
