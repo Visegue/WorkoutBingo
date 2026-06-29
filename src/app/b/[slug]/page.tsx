@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import { SetupRequired } from "@/app/setup-required";
 import { PublicBingoGrid } from "@/components/public-bingo-grid";
+import { HelpIconLink } from "@/components/help-icon-link";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -104,10 +105,13 @@ export default async function PublicBoardPage({
   return (
     <main className="page-shell">
       <Stack gap="lg">
-        <div>
-          <Title>{board.title}</Title>
-          {board.description ? <Text c="dimmed">{board.description}</Text> : null}
-        </div>
+        <Group justify="space-between" align="flex-start" wrap="nowrap">
+          <div>
+            <Title>{board.title}</Title>
+            {board.description ? <Text c="dimmed">{board.description}</Text> : null}
+          </div>
+          <HelpIconLink />
+        </Group>
         <Card radius="lg" p="lg" withBorder>
           <Group justify="space-between" mb="sm">
             <Badge color={isFinished ? "gray" : "green"}>

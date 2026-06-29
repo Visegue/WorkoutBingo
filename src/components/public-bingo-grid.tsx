@@ -19,7 +19,7 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import { IconFilter, IconHelpCircle, IconSearch } from "@tabler/icons-react";
+import { IconFilter, IconSearch } from "@tabler/icons-react";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
@@ -282,18 +282,6 @@ export function PublicBingoGrid({
                 ]}
               />
             ) : null}
-            <Button
-              component="a"
-              href="/help"
-              target="_blank"
-              rel="noreferrer"
-              size="xs"
-              variant="subtle"
-              color="gray"
-              leftSection={<IconHelpCircle size={16} />}
-            >
-              Hjälp
-            </Button>
           </Group>
           <Popover
             opened={filterOpened}
