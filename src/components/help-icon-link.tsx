@@ -8,13 +8,13 @@ export function HelpIconLink() {
       href="/help"
       target="_blank"
       rel="noreferrer"
-      size="xl"
+      size="lg"
       radius="xl"
       variant="light"
       color="green"
       aria-label="Öppna hjälp"
     >
-      <IconHelpCircle size={30} stroke={2.4} />
+      <IconHelpCircle size={22} stroke={2.4} />
     </ActionIcon>
   );
 }

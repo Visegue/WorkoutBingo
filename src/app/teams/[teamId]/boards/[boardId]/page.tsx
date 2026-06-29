@@ -10,7 +10,6 @@ import {
 } from "@mantine/core";
 import { SetupRequired } from "@/app/setup-required";
 import { AdminBreadcrumbs } from "@/components/admin-breadcrumbs";
-import { HelpIconLink } from "@/components/help-icon-link";
 import { PublicBingoGrid } from "@/components/public-bingo-grid";
 import { ensureProfile } from "@/lib/domain";
 import { hasSupabaseEnv, siteUrl } from "@/lib/env";
@@ -131,19 +130,16 @@ export default async function BoardPage({
             <Title>{board.title}</Title>
             <Text c="dimmed">{board.description}</Text>
           </div>
-          <Group gap="xs" wrap="nowrap">
-            <HelpIconLink />
-            {isLeader ? (
-              <Button
-                component="a"
-                href={`/teams/${teamId}/boards/${boardId}/edit`}
-                color="green"
-                variant="light"
-              >
-                Redigera
-              </Button>
-            ) : null}
-          </Group>
+          {isLeader ? (
+            <Button
+              component="a"
+              href={`/teams/${teamId}/boards/${boardId}/edit`}
+              color="green"
+              variant="light"
+            >
+              Redigera
+            </Button>
+          ) : null}
         </Group>
 
         {board.slug ? (

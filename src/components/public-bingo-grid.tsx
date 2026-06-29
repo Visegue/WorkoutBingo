@@ -22,6 +22,7 @@ import {
 import { IconFilter, IconSearch } from "@tabler/icons-react";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { HelpIconLink } from "@/components/help-icon-link";
 
 type CellData = {
   id: string;
@@ -283,66 +284,69 @@ export function PublicBingoGrid({
               />
             ) : null}
           </Group>
-          <Popover
-            opened={filterOpened}
-            onChange={setFilterOpened}
-            position="bottom-end"
-            withArrow
-            shadow="md"
-          >
-            <Popover.Target>
-              <Tooltip label="Filtrera spelare">
-                <Indicator
-                  disabled={allMembersVisible}
-                  color="green"
-                  size={10}
-                  offset={4}
-                  withBorder
-                >
-                  <ActionIcon
-                    variant={allMembersVisible ? "light" : "filled"}
+          <Group gap="xs" wrap="nowrap">
+            <HelpIconLink />
+            <Popover
+              opened={filterOpened}
+              onChange={setFilterOpened}
+              position="bottom-end"
+              withArrow
+              shadow="md"
+            >
+              <Popover.Target>
+                <Tooltip label="Filtrera spelare">
+                  <Indicator
+                    disabled={allMembersVisible}
                     color="green"
-                    size="lg"
-                    aria-label="Filtrera spelare"
-                    onClick={() => setFilterOpened((opened) => !opened)}
+                    size={10}
+                    offset={4}
+                    withBorder
                   >
-                    <IconFilter size={20} />
-                  </ActionIcon>
-                </Indicator>
-              </Tooltip>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Stack gap="xs" miw={220}>
-                <Checkbox
-                  label="Visa alla"
-                  checked={allMembersVisible}
-                  indeterminate={
-                    hiddenMemberIds.length > 0 && hiddenMemberIds.length < members.length
-                  }
-                  onChange={(event) => {
-                    setHiddenMemberIds(
-                      event.currentTarget.checked
-                        ? []
-                        : members.map((member) => member.id),
-                    );
-                  }}
-                />
-                <Divider />
-                {members.map((member) => (
+                    <ActionIcon
+                      variant={allMembersVisible ? "light" : "filled"}
+                      color="green"
+                      size="lg"
+                      aria-label="Filtrera spelare"
+                      onClick={() => setFilterOpened((opened) => !opened)}
+                    >
+                      <IconFilter size={20} />
+                    </ActionIcon>
+                  </Indicator>
+                </Tooltip>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Stack gap="xs" miw={220}>
                   <Checkbox
-                    key={member.id}
-                    checked={!hiddenMemberIds.includes(member.id)}
-                    onChange={(event) =>
-                      toggleVisibleMember(member.id, event.currentTarget.checked)
+                    label="Visa alla"
+                    checked={allMembersVisible}
+                    indeterminate={
+                      hiddenMemberIds.length > 0 && hiddenMemberIds.length < members.length
                     }
-                    label={
-                      <MemberBadge name={member.display_name} color={member.color} />
-                    }
+                    onChange={(event) => {
+                      setHiddenMemberIds(
+                        event.currentTarget.checked
+                          ? []
+                          : members.map((member) => member.id),
+                      );
+                    }}
                   />
-                ))}
-              </Stack>
-            </Popover.Dropdown>
-          </Popover>
+                  <Divider />
+                  {members.map((member) => (
+                    <Checkbox
+                      key={member.id}
+                      checked={!hiddenMemberIds.includes(member.id)}
+                      onChange={(event) =>
+                        toggleVisibleMember(member.id, event.currentTarget.checked)
+                      }
+                      label={
+                        <MemberBadge name={member.display_name} color={member.color} />
+                      }
+                    />
+                  ))}
+                </Stack>
+              </Popover.Dropdown>
+            </Popover>
+          </Group>
         </Group>
       ) : null}
       {checkError ? (
