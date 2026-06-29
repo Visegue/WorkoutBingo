@@ -76,6 +76,86 @@ function ExampleCard() {
   );
 }
 
+function SemiFilledBoardIllustration() {
+  const completed = new Set([0, 2, 4, 5, 7, 10, 12, 14]);
+  const memberColors = [
+    "var(--mantine-color-blue-7)",
+    "var(--mantine-color-orange-7)",
+    "var(--mantine-color-red-7)",
+  ];
+
+  return (
+    <Card radius="xl" p="lg" withBorder bg="green.0">
+      <Stack gap="md">
+        <Group justify="space-between">
+          <div>
+            <Text fw={900} size="xl">Sommar 2026</Text>
+            <Text size="sm" c="dimmed">8 / 16 aktiviteter avklarade tillsammans</Text>
+          </div>
+          <Badge color="green" variant="filled">Lagbricka</Badge>
+        </Group>
+        <SimpleGrid cols={{ base: 4, xs: 4 }} spacing={8}>
+          {Array.from({ length: 16 }).map((_, index) => {
+            const isDone = completed.has(index);
+            return (
+              <div
+                key={index}
+                style={{
+                  minHeight: 74,
+                  borderRadius: 14,
+                  border: isDone
+                    ? "2px solid var(--mantine-color-green-5)"
+                    : "1px solid var(--mantine-color-gray-3)",
+                  background: isDone ? "var(--mantine-color-green-0)" : "white",
+                  padding: 8,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div
+                  style={{
+                    width: "75%",
+                    height: 8,
+                    borderRadius: 999,
+                    background: isDone
+                      ? "var(--mantine-color-green-6)"
+                      : "var(--mantine-color-gray-3)",
+                  }}
+                />
+                <Group gap={3}>
+                  {isDone ? (
+                    memberColors.slice(0, (index % 3) + 1).map((color, memberIndex) => (
+                      <div
+                        key={`${index}-${memberIndex}`}
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          background: color,
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: "50%",
+                        border: "2px dashed var(--mantine-color-green-5)",
+                      }}
+                    />
+                  )}
+                </Group>
+              </div>
+            );
+          })}
+        </SimpleGrid>
+      </Stack>
+    </Card>
+  );
+}
+
 function CheckModalIllustration() {
   return (
     <Card radius="xl" withBorder p="md">
@@ -175,6 +255,8 @@ export default function HelpPage() {
             du vill följa en enskild spelare.
           </Text>
         </Stack>
+
+        <SemiFilledBoardIllustration />
 
         <HelpSection title="Kortens delar" visual={<ExampleCard />}>
           Varje kort visar aktivitetens namn och eventuell mängd. Grön bakgrund
