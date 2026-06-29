@@ -430,6 +430,7 @@ export function PublicBingoGrid({
                       fontSize: "var(--bingo-check-font-size, 19px)",
                       fontWeight: 800,
                       lineHeight: 1,
+                      flexShrink: 0,
                       marginInline: "var(--bingo-check-margin-inline, auto)",
                       marginTop: "var(--bingo-check-margin-top, auto)",
                     }}
